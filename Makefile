@@ -56,73 +56,57 @@ $(BUILDDIR):
 	mkdir -p $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS
 	mkdir -p $(BUILDDIR)/$(KEXT_NAME).kext/Contents/Resources
 
-# Build object files
-$(BUILDDIR)/%.o: source/%.cpp $(HEADERS) $(BUILDDIR)
-	@echo "Compiling $<..."
-	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
-		-I$(KEXT_INC) \
-		-I$(LILU_INC) \
-		-I$(PROJECT_INC) \
-		-target kext \
-		-isysroot $(SYSROOT) \
-		-c $< -o $@
+# Deployment targets per architecture
+DEPLOYMENT_TARGET_X86_64 = 10.15
+DEPLOYMENT_TARGET_ARM64 = 11.0
 
-# Link all objects
-$(BUILDDIR)/$(PRODUCT_NAME)_all.o: $(SOURCES:source/%.cpp=$(BUILDDIR)/%.o) $(BUILDDIR)
-	@echo "Building ForceACL.kext..."
+# Removed pattern rule - all compilation handled by $(TARGET) rule
 
-# Build kext
-$(TARGET): $(SOURCES:source/%.cpp=$(BUILDDIR)/%.o) Info.plist $(BUILDDIR)
+# Build kext - compile each architecture separately then combine
+$(TARGET): $(BUILDDIR)
 	@echo "Building ForceACL.kext..."
 	@for arch in $(ARCHS); do \
-		echo "  Building for $$arch..."; \
-		$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
-			-I$(KEXT_INC) -I$(LILU_INC) -I$(PROJECT_INC) \
-			-target kext$${arch#x86_64} \
-			-isysroot $(SYSROOT) \
-			-c source/plugin_main.cpp -o $(BUILDDIR)/plugin_main_$${arch}.o && \
-		$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
-			-I$(KEXT_INC) -I$(LILU_INC) -I$(PROJECT_INC) \
-			-target kext$${arch#x86_64} \
-			-isysroot $(SYSROOT) \
-			-c source/ForceACL.cpp -o $(BUILDDIR)/ForceACL_$${arch}.o && \
-		$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
-			-I$(KEXT_INC) -I$(LILU_INC) -I$(PROJECT_INC) \
-			-target kext$${arch#x86_64} \
-			-isysroot $(SYSROOT) \
-			-c source/GPUDetector.cpp -o $(BUILDDIR)/GPUDetector_$${arch}.o && \
-		$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
-			-I$(KEXT_INC) -I$(LILU_INC) -I$(PROJECT_INC) \
-			-target kext$${arch#x86_64} \
-			-isysroot $(SYSROOT) \
-			-c source/PlatformDatabase.cpp -o $(BUILDDIR)/PlatformDatabase_$${arch}.o; \
+		target_triple=""; \
+		deploy_target=""; \
+		if [ "$$arch" = "x86_64" ]; then \
+			target_triple="x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64)"; \
+		elif [ "$$arch" = "arm64" ]; then \
+			target_triple="arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64)"; \
+		fi; \
+		echo "  Building for $$arch (target: $$target_triple)..."; \
+		for src in $(SOURCES); do \
+			obj="$(BUILDDIR)/$$(basename $$src .cpp)_$${arch}.o"; \
+			echo "    Compiling $$src..."; \
+			$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
+				-I$(KEXT_INC) -I$(LILU_INC) -I$(PROJECT_INC) \
+				-target $$target_triple \
+				-isysroot $(SYSROOT) \
+				-c $$src -o $$obj || exit 1; \
+		done; \
 	done
 	@echo "  Linking..."
-	@if [ -f $(BUILDDIR)/plugin_main_x86_64.o ] && [ -f $(BUILDDIR)/plugin_main_arm64.o ]; then \
-		lipo -create \
-			$(BUILDDIR)/plugin_main_x86_64.o \
-			$(BUILDDIR)/ForceACL_x86_64.o \
-			$(BUILDDIR)/GPUDetector_x86_64.o \
-			$(BUILDDIR)/PlatformDatabase_x86_64.o \
-			$(BUILDDIR)/plugin_main_arm64.o \
-			$(BUILDDIR)/ForceACL_arm64.o \
-			$(BUILDDIR)/GPUDetector_arm64.o \
-			$(BUILDDIR)/PlatformDatabase_arm64.o \
+	@mkdir -p $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS
+	@for arch in $(ARCHS); do \
+		echo "  Linking $$arch..."; \
+		objs=""; \
+		for src in $(SOURCES); do \
+			obj="$(BUILDDIR)/$$(basename $$src .cpp)_$${arch}.o"; \
+			if [ -f "$$obj" ]; then \
+				objs="$$objs $$obj"; \
+			fi; \
+		done; \
+		if [ -n "$$objs" ]; then \
+			ld -r -arch $$arch $$objs -o $(BUILDDIR)/ForceACL_$${arch}_linked.o; \
+		fi; \
+	done
+	@echo "  Creating universal binary..."
+	@if [ -f $(BUILDDIR)/ForceACL_x86_64_linked.o ] && [ -f $(BUILDDIR)/ForceACL_arm64_linked.o ]; then \
+		lipo -create $(BUILDDIR)/ForceACL_x86_64_linked.o $(BUILDDIR)/ForceACL_arm64_linked.o \
 			-output $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS/$(PRODUCT_NAME); \
-	elif [ -f $(BUILDDIR)/plugin_main_x86_64.o ]; then \
-		lipo -create \
-			$(BUILDDIR)/plugin_main_x86_64.o \
-			$(BUILDDIR)/ForceACL_x86_64.o \
-			$(BUILDDIR)/GPUDetector_x86_64.o \
-			$(BUILDDIR)/PlatformDatabase_x86_64.o \
-			-output $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS/$(PRODUCT_NAME); \
-	elif [ -f $(BUILDDIR)/plugin_main_arm64.o ]; then \
-		lipo -create \
-			$(BUILDDIR)/plugin_main_arm64.o \
-			$(BUILDDIR)/ForceACL_arm64.o \
-			$(BUILDDIR)/GPUDetector_arm64.o \
-			$(BUILDDIR)/PlatformDatabase_arm64.o \
-			-output $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS/$(PRODUCT_NAME); \
+	elif [ -f $(BUILDDIR)/ForceACL_x86_64_linked.o ]; then \
+		cp $(BUILDDIR)/ForceACL_x86_64_linked.o $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS/$(PRODUCT_NAME); \
+	elif [ -f $(BUILDDIR)/ForceACL_arm64_linked.o ]; then \
+		cp $(BUILDDIR)/ForceACL_arm64_linked.o $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS/$(PRODUCT_NAME); \
 	fi
 	@cp Info.plist $(BUILDDIR)/$(KEXT_NAME).kext/Contents/Info.plist
 	@echo "Build complete: $(BUILDDIR)/$(KEXT_NAME).kext"
