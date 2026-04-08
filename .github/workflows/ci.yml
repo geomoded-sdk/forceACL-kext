@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install dependencies
+      run: |
+        brew install llvm
+        git clone https://github.com/acidanthera/Lilu.git ../Lilu
+        cd ../Lilu
+        git submodule update --init --recursive
+
+    - name: Build
+      run: |
+        export LILU_PATH=$PWD/../Lilu
+        make
+
+    - name: Check build artifacts
+      run: |
+        ls -la build/ForceACL.kext/Contents/MacOS/
+        file build/ForceACL.kext/Contents/MacOS/ForceWACL
+
+    - name: Clean
+      run: make clean

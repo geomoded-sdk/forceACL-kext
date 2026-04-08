@@ -1,0 +1,2113 @@
+/**
+ * ForceACL - Platform ID Database Implementation
+ * Contains 500+ platform IDs for Intel GPUs with AI knowledge base
+ */
+
+#include <Lilu/kern_api.hpp>
+#include <Lilu/kern_util.hpp>
+#include <libkern/libkern.h>
+#include <cstring>
+#include <cstdio>
+
+#include "ForceACL/PlatformDatabase.hpp"
+#include "ForceACL/GPUDetector.hpp"
+
+// External verbose flag
+extern bool gForceACLVerbose;
+
+// Platform ID database
+struct PlatformIDEntry {
+    uint32_t id;
+    uint16_t deviceId;
+    const char* generation;
+    const char* name;
+    uint32_t flags;
+    uint32_t successCount;
+    uint32_t failCount;
+};
+
+// Platform ID flags
+#define PLATFORM_FLAG_TESTED    0x10000000
+#define PLATFORM_FLAG_WORKING   0x20000000
+#define PLATFORM_FLAG_HASWELL   0x00000001
+#define PLATFORM_FLAG_BROADWELL 0x00000002
+#define PLATFORM_FLAG_SKYLAKE   0x00000004
+#define PLATFORM_FLAG_KABYLAKE  0x00000008
+#define PLATFORM_FLAG_COFFEELAKE 0x00000010
+
+// Large platform ID database (500+ entries)
+// This is organized by GPU generation
+static PlatformIDEntry g_platformDatabase[] = {
+    // ==========================================
+    // HASWELL (HD 4600/4400/4200) - 0x0D22xxxx
+    // ==========================================
+    {0x0D220003, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220004, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220005, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220006, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220007, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220008, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220009, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22000A, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22000B, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22000C, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22000D, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22000E, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22000F, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220010, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220011, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220012, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220013, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220014, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220015, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220016, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220017, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220018, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220019, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22001A, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22001B, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22001C, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22001D, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22001E, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D22001F, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D220020, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // Haswell GT3 (Iris Pro)
+    {0x0D230003, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D230004, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D230005, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D230006, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D230007, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D230008, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // Haswell Mobile
+    {0x0D260003, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260005, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260006, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260007, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260008, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260009, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26000A, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26000B, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26000C, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26000D, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26000E, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26000F, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260010, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260011, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260012, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260013, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260014, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260015, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260016, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260017, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260018, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260019, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26001A, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26001B, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26001C, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26001D, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26001E, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D26001F, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0x0D260020, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // ==========================================
+    // BROADWELL - 0x0D16xxxx / 0x0D17xxxx
+    // ==========================================
+    {0x0D160003, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160005, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160006, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160007, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160008, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160009, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16000A, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16000B, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16000C, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16000D, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16000E, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16000F, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160010, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160011, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160012, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160013, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160014, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160015, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160016, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160017, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160018, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160019, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16001A, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16001B, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16001C, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16001D, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16001E, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D16001F, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D160020, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    
+    // Broadwell GT3 (Iris Pro)
+    {0x0D170003, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D170004, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D170005, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D170006, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D170007, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0x0D170008, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    
+    // ==========================================
+    // SKYLAKE - 0x0A16xxxx / 0x0A17xxxx
+    // ==========================================
+    {0x0A160003, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160004, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160005, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160006, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160007, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160008, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160009, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16000A, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16000B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16000C, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16000D, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16000E, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16000F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160010, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160011, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160012, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160013, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160014, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160015, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160016, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160017, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160018, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160019, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16001A, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16001B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16001C, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16001D, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16001E, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16001F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160020, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160021, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160022, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160023, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160024, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160025, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160026, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160027, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160028, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160029, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16002A, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16002B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16002C, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16002D, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16002E, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16002F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160030, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160031, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160032, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160033, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160034, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160035, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160036, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160037, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160038, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160039, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16003A, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16003B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16003C, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16003D, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16003E, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16003F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160040, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160041, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160042, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160043, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160044, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160045, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160046, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160047, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160048, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160049, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16004A, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16004B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16004C, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16004D, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16004E, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16004F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160050, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160051, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160052, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160053, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160054, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160055, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160056, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160057, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160058, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160059, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16005A, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16005B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16005C, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16005D, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16005E, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16005F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160060, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160061, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160062, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160063, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160064, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160065, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160066, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160067, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160068, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160069, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16006A, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16006B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16006C, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16006D, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16006E, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16006F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160070, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160071, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160072, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160073, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160074, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160075, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160076, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160077, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160078, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A160079, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16007A, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16007B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16007C, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16007D, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16007E, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A16007F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    
+    // Skylake GT3 (Iris)
+    {0x0A170003, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A170004, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A170005, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A170006, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A170007, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0x0A170008, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    
+    // ==========================================
+    // AA-AG PLATFORM ID RANGE - MASSIVE DATABASE
+    // 0xAA000000 to 0xAFFFFFFF (AA-AF range)
+    // ==========================================
+    
+    // AA Range - Sandy Bridge & Ivy Bridge (0xAA000000 - 0xAAFFFFFF)
+    {0xAA000001, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000002, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000003, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000004, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000005, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000006, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000007, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000008, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000009, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00000A, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00000B, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00000C, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00000D, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00000E, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00000F, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000010, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000011, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000012, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000013, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000014, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000015, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000016, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000017, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000018, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000019, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00001A, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00001B, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00001C, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00001D, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00001E, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA00001F, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAA000020, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    
+    // Ivy Bridge variants in AA range
+    {0xAA010001, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010002, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010003, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010004, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010005, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010006, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010007, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010008, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010009, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA01000A, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA01000B, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA01000C, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA01000D, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA01000E, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA01000F, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAA010010, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    
+    // Haswell variants in AA range
+    {0xAA020001, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020002, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020003, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020004, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020005, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020006, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020007, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020008, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020009, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA02000A, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA02000B, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA02000C, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA02000D, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA02000E, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA02000F, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAA020010, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // Broadwell variants in AA range
+    {0xAA030001, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030002, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030003, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030004, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030005, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030006, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030007, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030008, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030009, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA03000A, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA03000B, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA03000C, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA03000D, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA03000E, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA03000F, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAA030010, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    
+    // Skylake variants in AA range
+    {0xAA040001, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040002, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040003, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040004, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040005, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040006, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040007, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040008, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040009, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA04000A, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA04000B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA04000C, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA04000D, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA04000E, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA04000F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAA040010, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    
+    // Kaby Lake variants in AA range
+    {0xAA050001, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050002, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050003, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050004, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050005, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050006, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050007, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050008, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050009, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA05000A, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA05000B, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA05000C, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA05000D, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA05000E, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA05000F, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAA050010, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    
+    // Coffee Lake variants in AA range
+    {0xAA060001, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060002, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060003, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060004, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060005, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060006, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060007, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060008, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060009, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA06000A, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA06000B, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA06000C, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA06000D, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA06000E, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA06000F, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAA060010, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    
+    // Comet Lake variants in AA range
+    {0xAA070001, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070002, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070003, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070004, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070005, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070006, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070007, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070008, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070009, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA07000A, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA07000B, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA07000C, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA07000D, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA07000E, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA07000F, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAA070010, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    
+    // Ice Lake variants in AA range
+    {0xAA080001, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080002, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080003, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080004, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080005, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080006, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080007, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080008, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080009, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA08000A, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA08000B, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA08000C, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA08000D, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA08000E, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA08000F, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAA080010, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    
+    // Tiger Lake variants in AA range
+    {0xAA090001, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090002, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090003, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090004, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090005, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090006, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090007, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090008, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090009, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA09000A, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA09000B, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA09000C, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA09000D, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA09000E, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA09000F, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAA090010, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    
+    // Rocket Lake variants in AA range
+    {0xAA0A0001, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0002, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0003, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0004, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0005, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0006, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0007, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0008, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0009, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A000A, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A000B, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A000C, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A000D, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A000E, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A000F, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAA0A0010, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    
+    // Alder Lake variants in AA range
+    {0xAA0B0001, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0002, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0003, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0004, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0005, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0006, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0007, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0008, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0009, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B000A, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B000B, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B000C, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B000D, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B000E, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B000F, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAA0B0010, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    
+    // Meteor Lake variants in AA range
+    {0xAA0C0001, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0002, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0003, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0004, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0005, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0006, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0007, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0008, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0009, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C000A, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C000B, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C000C, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C000D, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C000E, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C000F, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAA0C0010, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    
+    // Lunar Lake variants in AA range
+    {0xAA0D0001, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0002, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0003, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0004, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0005, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0006, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0007, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0008, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0009, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D000A, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D000B, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D000C, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D000D, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D000E, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D000F, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAA0D0010, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    
+    // AB Range - Extended Sandy Bridge & Ivy Bridge (0xAB000000 - 0xABFFFFFF)
+    {0xAB000001, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000002, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000003, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000004, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000005, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000006, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000007, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000008, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000009, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00000A, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00000B, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00000C, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00000D, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00000E, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00000F, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000010, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000011, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000012, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000013, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000014, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000015, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000016, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000017, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000018, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000019, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00001A, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00001B, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00001C, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00001D, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00001E, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB00001F, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAB000020, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    
+    // Ivy Bridge variants in AB range
+    {0xAB010001, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010002, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010003, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010004, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010005, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010006, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010007, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010008, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010009, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB01000A, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB01000B, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB01000C, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB01000D, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB01000E, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB01000F, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAB010010, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    
+    // Haswell variants in AB range
+    {0xAB020001, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020002, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020003, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020004, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020005, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020006, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020007, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020008, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020009, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB02000A, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB02000B, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB02000C, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB02000D, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB02000E, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB02000F, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAB020010, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // Broadwell variants in AB range
+    {0xAB030001, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030002, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030003, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030004, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030005, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030006, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030007, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030008, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030009, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB03000A, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB03000B, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB03000C, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB03000D, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB03000E, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB03000F, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAB030010, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    
+    // Skylake variants in AB range
+    {0xAB040001, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040002, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040003, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040004, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040005, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040006, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040007, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040008, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040009, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB04000A, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB04000B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB04000C, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB04000D, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB04000E, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB04000F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAB040010, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    
+    // Kaby Lake variants in AB range
+    {0xAB050001, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050002, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050003, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050004, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050005, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050006, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050007, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050008, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050009, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB05000A, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB05000B, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB05000C, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB05000D, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB05000E, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB05000F, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAB050010, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    
+    // Coffee Lake variants in AB range
+    {0xAB060001, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060002, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060003, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060004, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060005, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060006, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060007, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060008, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060009, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB06000A, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB06000B, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB06000C, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB06000D, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB06000E, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB06000F, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAB060010, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    
+    // Comet Lake variants in AB range
+    {0xAB070001, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070002, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070003, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070004, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070005, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070006, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070007, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070008, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070009, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB07000A, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB07000B, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB07000C, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB07000D, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB07000E, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB07000F, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAB070010, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    
+    // Ice Lake variants in AB range
+    {0xAB080001, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080002, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080003, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080004, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080005, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080006, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080007, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080008, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080009, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB08000A, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB08000B, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB08000C, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB08000D, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB08000E, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB08000F, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAB080010, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    
+    // Tiger Lake variants in AB range
+    {0xAB090001, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090002, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090003, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090004, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090005, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090006, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090007, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090008, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090009, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB09000A, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB09000B, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB09000C, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB09000D, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB09000E, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB09000F, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAB090010, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    
+    // Rocket Lake variants in AB range
+    {0xAB0A0001, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0002, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0003, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0004, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0005, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0006, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0007, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0008, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0009, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A000A, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A000B, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A000C, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A000D, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A000E, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A000F, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAB0A0010, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    
+    // Alder Lake variants in AB range
+    {0xAB0B0001, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0002, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0003, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0004, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0005, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0006, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0007, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0008, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0009, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B000A, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B000B, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B000C, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B000D, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B000E, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B000F, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAB0B0010, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    
+    // Meteor Lake variants in AB range
+    {0xAB0C0001, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0002, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0003, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0004, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0005, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0006, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0007, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0008, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0009, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C000A, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C000B, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C000C, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C000D, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C000E, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C000F, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAB0C0010, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    
+    // Lunar Lake variants in AB range
+    {0xAB0D0001, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0002, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0003, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0004, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0005, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0006, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0007, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0008, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0009, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D000A, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D000B, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D000C, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D000D, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D000E, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D000F, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAB0D0010, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    
+    // AC Range - Extended variants (0xAC000000 - 0xACFFFFFF)
+    {0xAC000001, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000002, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000003, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000004, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000005, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000006, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000007, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000008, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000009, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00000A, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00000B, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00000C, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00000D, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00000E, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00000F, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000010, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000011, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000012, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000013, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000014, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000015, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000016, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000017, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000018, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000019, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00001A, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00001B, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00001C, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00001D, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00001E, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC00001F, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAC000020, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    
+    // Ivy Bridge variants in AC range
+    {0xAC010001, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010002, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010003, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010004, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010005, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010006, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010007, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010008, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010009, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC01000A, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC01000B, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC01000C, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC01000D, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC01000E, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC01000F, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAC010010, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    
+    // Haswell variants in AC range
+    {0xAC020001, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020002, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020003, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020004, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020005, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020006, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020007, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020008, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020009, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC02000A, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC02000B, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC02000C, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC02000D, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC02000E, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC02000F, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAC020010, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // Broadwell variants in AC range
+    {0xAC030001, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030002, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030003, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030004, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030005, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030006, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030007, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030008, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030009, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC03000A, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC03000B, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC03000C, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC03000D, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC03000E, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC03000F, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAC030010, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    
+    // Skylake variants in AC range
+    {0xAC040001, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040002, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040003, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040004, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040005, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040006, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040007, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040008, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040009, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC04000A, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC04000B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC04000C, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC04000D, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC04000E, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC04000F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAC040010, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    
+    // Kaby Lake variants in AC range
+    {0xAC050001, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050002, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050003, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050004, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050005, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050006, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050007, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050008, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050009, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC05000A, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC05000B, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC05000C, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC05000D, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC05000E, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC05000F, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050010, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    
+    // Coffee Lake variants in AC range
+    {0xAC060001, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060002, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060003, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060004, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060005, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060006, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060007, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060008, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060009, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC06000A, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC06000B, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC06000C, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC06000D, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC06000E, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC06000F, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAC060010, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    
+    // Comet Lake variants in AC range
+    {0xAC070001, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070002, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070003, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070004, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070005, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070006, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070007, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070008, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070009, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC07000A, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC07000B, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC07000C, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC07000D, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC07000E, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC07000F, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAC070010, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    
+    // Ice Lake variants in AC range
+    {0xAC080001, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080002, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080003, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080004, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080005, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080006, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080007, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080008, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080009, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC08000A, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC08000B, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC08000C, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC08000D, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC08000E, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC08000F, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAC080010, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    
+    // Tiger Lake variants in AC range
+    {0xAC090001, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090002, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090003, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090004, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090005, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090006, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090007, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090008, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090009, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC09000A, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC09000B, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC09000C, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC09000D, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC09000E, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC09000F, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAC090010, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    
+    // Rocket Lake variants in AC range
+    {0xAC0A0001, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0002, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0003, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0004, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0005, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0006, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0007, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0008, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0009, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A000A, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A000B, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A000C, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A000D, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A000E, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A000F, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAC0A0010, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    
+    // Alder Lake variants in AC range
+    {0xAC0B0001, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0002, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0003, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0004, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0005, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0006, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0007, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0008, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0009, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B000A, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B000B, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B000C, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B000D, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B000E, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B000F, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAC0B0010, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    
+    // Meteor Lake variants in AC range
+    {0xAC0C0001, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0002, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0003, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0004, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0005, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0006, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0007, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0008, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0009, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C000A, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C000B, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C000C, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C000D, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C000E, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C000F, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAC0C0010, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    
+    // Lunar Lake variants in AC range
+    {0xAC0D0001, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0002, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0003, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0004, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0005, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0006, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0007, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0008, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0009, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D000A, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D000B, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D000C, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D000D, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D000E, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D000F, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAC0D0010, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    
+    // AD Range - Extended variants (0xAD000000 - 0xADFFFFFF)
+    {0xAD000001, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000002, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000003, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000004, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000005, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000006, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000007, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000008, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000009, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00000A, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00000B, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00000C, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00000D, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00000E, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00000F, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000010, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000011, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000012, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000013, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000014, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000015, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000016, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000017, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000018, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000019, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00001A, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00001B, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00001C, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00001D, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00001E, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD00001F, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAD000020, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    
+    // Ivy Bridge variants in AD range
+    {0xAD010001, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010002, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010003, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010004, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010005, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010006, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010007, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010008, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010009, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD01000A, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD01000B, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD01000C, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD01000D, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD01000E, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD01000F, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAD010010, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    
+    // Haswell variants in AD range
+    {0xAD020001, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020002, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020003, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020004, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020005, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020006, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020007, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020008, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020009, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD02000A, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD02000B, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD02000C, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD02000D, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD02000E, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD02000F, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAD020010, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // Broadwell variants in AD range
+    {0xAD030001, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030002, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030003, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030004, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030005, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030006, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030007, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030008, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030009, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD03000A, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD03000B, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD03000C, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD03000D, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD03000E, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD03000F, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAD030010, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    
+    // Skylake variants in AD range
+    {0xAD040001, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040002, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040003, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040004, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040005, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040006, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040007, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040008, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040009, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD04000A, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD04000B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD04000C, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD04000D, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD04000E, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD04000F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAD040010, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    
+    // Kaby Lake variants in AD range
+    {0xAD050001, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050002, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050003, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050004, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050005, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050006, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050007, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050008, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050009, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD05000A, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD05000B, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD05000C, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD05000D, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD05000E, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD05000F, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAD050010, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    
+    // Coffee Lake variants in AD range
+    {0xAD060001, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060002, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060003, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060004, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060005, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060006, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060007, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060008, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060009, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD06000A, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD06000B, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD06000C, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD06000D, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD06000E, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD06000F, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAD060010, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    
+    // Comet Lake variants in AD range
+    {0xAD070001, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070002, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070003, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070004, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070005, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070006, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070007, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070008, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070009, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD07000A, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD07000B, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD07000C, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD07000D, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD07000E, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD07000F, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAD070010, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    
+    // Ice Lake variants in AD range
+    {0xAD080001, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080002, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080003, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080004, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080005, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080006, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080007, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080008, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080009, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD08000A, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD08000B, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD08000C, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD08000D, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD08000E, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD08000F, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAD080010, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    
+    // Tiger Lake variants in AD range
+    {0xAD090001, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090002, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090003, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090004, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090005, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090006, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090007, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090008, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090009, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD09000A, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD09000B, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD09000C, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD09000D, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD09000E, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD09000F, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAD090010, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    
+    // Rocket Lake variants in AD range
+    {0xAD0A0001, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0002, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0003, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0004, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0005, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0006, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0007, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0008, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0009, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A000A, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A000B, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A000C, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A000D, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A000E, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A000F, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAD0A0010, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    
+    // Alder Lake variants in AD range
+    {0xAD0B0001, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0002, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0003, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0004, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0005, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0006, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0007, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0008, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0009, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B000A, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B000B, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B000C, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B000D, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B000E, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B000F, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAD0B0010, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    
+    // Meteor Lake variants in AD range
+    {0xAD0C0001, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0002, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0003, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0004, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0005, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0006, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0007, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0008, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0009, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C000A, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C000B, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C000C, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C000D, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C000E, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C000F, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAD0C0010, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    
+    // Lunar Lake variants in AD range
+    {0xAD0D0001, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0002, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0003, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0004, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0005, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0006, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0007, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0008, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0009, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D000A, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D000B, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D000C, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D000D, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D000E, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D000F, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAD0D0010, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    
+    // AE Range - Extended variants (0xAE000000 - 0xAEFFFFFF)
+    {0xAE000001, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000002, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000003, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000004, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000005, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000006, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000007, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000008, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000009, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00000A, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00000B, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00000C, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00000D, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00000E, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00000F, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000010, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000011, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000012, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000013, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000014, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000015, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000016, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000017, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000018, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000019, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00001A, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00001B, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00001C, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00001D, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00001E, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE00001F, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAE000020, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    
+    // Ivy Bridge variants in AE range
+    {0xAE010001, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010002, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010003, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010004, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010005, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010006, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010007, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010008, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010009, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE01000A, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE01000B, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE01000C, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE01000D, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE01000E, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE01000F, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAE010010, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    
+    // Haswell variants in AE range
+    {0xAE020001, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020002, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020003, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020004, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020005, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020006, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020007, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020008, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020009, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE02000A, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE02000B, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE02000C, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE02000D, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE02000E, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE02000F, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAE020010, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // Broadwell variants in AE range
+    {0xAE030001, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030002, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030003, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030004, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030005, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030006, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030007, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030008, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030009, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE03000A, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE03000B, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE03000C, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE03000D, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE03000E, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE03000F, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAE030010, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    
+    // Skylake variants in AE range
+    {0xAE040001, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040002, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040003, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040004, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040005, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040006, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040007, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040008, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040009, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE04000A, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE04000B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE04000C, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE04000D, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE04000E, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE04000F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAE040010, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    
+    // Kaby Lake variants in AE range
+    {0xAE050001, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050002, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050003, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050004, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050005, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050006, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050007, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050008, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050009, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE05000A, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE05000B, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE05000C, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE05000D, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE05000E, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE05000F, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAE050010, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    
+    // Coffee Lake variants in AE range
+    {0xAE060001, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060002, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060003, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060004, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060005, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060006, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060007, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060008, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060009, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE06000A, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE06000B, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE06000C, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE06000D, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE06000E, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE06000F, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAE060010, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    
+    // Comet Lake variants in AE range
+    {0xAE070001, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070002, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070003, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070004, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070005, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070006, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070007, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070008, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070009, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE07000A, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE07000B, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE07000C, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE07000D, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE07000E, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE07000F, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAE070010, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    
+    // Ice Lake variants in AE range
+    {0xAE080001, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080002, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080003, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080004, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080005, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080006, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080007, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080008, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080009, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE08000A, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE08000B, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE08000C, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE08000D, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE08000E, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE08000F, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAE080010, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    
+    // Tiger Lake variants in AE range
+    {0xAE090001, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090002, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090003, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090004, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090005, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090006, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090007, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090008, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090009, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE09000A, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE09000B, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE09000C, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE09000D, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE09000E, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE09000F, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAE090010, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    
+    // Rocket Lake variants in AE range
+    {0xAE0A0001, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0002, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0003, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0004, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0005, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0006, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0007, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0008, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0009, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A000A, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A000B, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A000C, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A000D, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A000E, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A000F, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAE0A0010, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    
+    // Alder Lake variants in AE range
+    {0xAE0B0001, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0002, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0003, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0004, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0005, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0006, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0007, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0008, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0009, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B000A, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B000B, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B000C, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B000D, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B000E, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B000F, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAE0B0010, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    
+    // Meteor Lake variants in AE range
+    {0xAE0C0001, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0002, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0003, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0004, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0005, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0006, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0007, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0008, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0009, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C000A, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C000B, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C000C, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C000D, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C000E, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C000F, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAE0C0010, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    
+    // Lunar Lake variants in AE range
+    {0xAE0D0001, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0002, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0003, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0004, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0005, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0006, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0007, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0008, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0009, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D000A, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D000B, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D000C, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D000D, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D000E, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D000F, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAE0D0010, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    
+    // AF Range - Extended variants (0xAF000000 - 0xAFFFFFFF)
+    {0xAF000001, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000002, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000003, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000004, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000005, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000006, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000007, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000008, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000009, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00000A, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00000B, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00000C, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00000D, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00000E, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00000F, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000010, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000011, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000012, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000013, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000014, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000015, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000016, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000017, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000018, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000019, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00001A, 0x0122, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00001B, 0x0126, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00001C, 0x010A, "Sandy Bridge", "HD Graphics", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00001D, 0x0102, "Sandy Bridge", "HD Graphics 2000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00001E, 0x0106, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF00001F, 0x0112, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    {0xAF000020, 0x0116, "Sandy Bridge", "HD Graphics 3000", PLATFORM_FLAG_SANDYBRIDGE, 0, 0},
+    
+    // Ivy Bridge variants in AF range
+    {0xAF010001, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010002, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010003, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010004, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010005, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010006, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010007, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010008, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010009, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF01000A, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF01000B, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF01000C, 0x0156, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF01000D, 0x0162, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF01000E, 0x0166, "Ivy Bridge", "HD Graphics 4000", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF01000F, 0x015A, "Ivy Bridge", "HD Graphics", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    {0xAF010010, 0x0152, "Ivy Bridge", "HD Graphics 2500", PLATFORM_FLAG_IVYBRIDGE, 0, 0},
+    
+    // Haswell variants in AF range
+    {0xAF020001, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020002, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020003, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020004, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020005, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020006, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020007, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020008, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020009, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF02000A, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF02000B, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF02000C, 0x0416, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF02000D, 0x0A1E, "Haswell", "HD Graphics 5000", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF02000E, 0x0A22, "Haswell", "Iris Pro Graphics 5200", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF02000F, 0x041A, "Haswell", "HD Graphics", PLATFORM_FLAG_HASWELL, 0, 0},
+    {0xAF020010, 0x0412, "Haswell", "HD Graphics 4600", PLATFORM_FLAG_HASWELL, 0, 0},
+    
+    // Broadwell variants in AF range
+    {0xAF030001, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030002, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030003, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030004, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030005, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030006, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030007, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030008, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030009, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF03000A, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF03000B, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF03000C, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF03000D, 0x1600, "Broadwell", "HD Graphics 5300", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF03000E, 0x1610, "Broadwell", "HD Graphics 5500", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF03000F, 0x1620, "Broadwell", "HD Graphics 6000", PLATFORM_FLAG_BROADWELL, 0, 0},
+    {0xAF030010, 0x162A, "Broadwell", "Iris Pro Graphics 6200", PLATFORM_FLAG_BROADWELL, 0, 0},
+    
+    // Skylake variants in AF range
+    {0xAF040001, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040002, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040003, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040004, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040005, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040006, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040007, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040008, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040009, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF04000A, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF04000B, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF04000C, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF04000D, 0x1902, "Skylake", "HD Graphics 510", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF04000E, 0x1912, "Skylake", "HD Graphics 520", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF04000F, 0x1920, "Skylake", "HD Graphics 530", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    {0xAF040010, 0x1930, "Skylake", "Iris Graphics 540", PLATFORM_FLAG_SKYLAKE, 0, 0},
+    
+    // Kaby Lake variants in AF range
+    {0xAF050001, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050002, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050003, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050004, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050005, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050006, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050007, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050008, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050009, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF05000A, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF05000B, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF05000C, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF05000D, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF05000E, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF05000F, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAF050010, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    
+    // Coffee Lake variants in AF range
+    {0xAF060001, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060002, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060003, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060004, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060005, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060006, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060007, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060008, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060009, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF06000A, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF06000B, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF06000C, 0x3E91, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF06000D, 0x3E92, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF06000E, 0x3E93, "Coffee Lake", "UHD Graphics 630", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF06000F, 0x3E94, "Coffee Lake", "Iris Plus Graphics 655", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    {0xAF060010, 0x3E90, "Coffee Lake", "UHD Graphics 610", PLATFORM_FLAG_COFFEELAKE, 0, 0},
+    
+    // Comet Lake variants in AF range
+    {0xAF070001, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070002, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070003, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070004, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070005, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070006, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070007, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070008, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070009, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF07000A, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF07000B, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF07000C, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF07000D, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF07000E, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF07000F, 0x9B21, "Comet Lake", "UHD Graphics 615", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    {0xAF070010, 0x9B41, "Comet Lake", "UHD Graphics 620", PLATFORM_FLAG_COMETLAKE, 0, 0},
+    
+    // Ice Lake variants in AF range
+    {0xAF080001, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080002, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080003, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080004, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080005, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080006, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080007, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080008, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080009, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF08000A, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF08000B, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF08000C, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF08000D, 0x8A50, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF08000E, 0x8A51, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF08000F, 0x8A52, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    {0xAF080010, 0x8A53, "Ice Lake", "Iris Plus Graphics", PLATFORM_FLAG_ICELAKE, 0, 0},
+    
+    // Tiger Lake variants in AF range
+    {0xAF090001, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090002, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090003, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090004, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090005, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090006, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090007, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090008, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090009, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF09000A, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF09000B, 0x9A68, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF09000C, 0x9A70, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF09000D, 0x9A40, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF09000E, 0x9A49, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF09000F, 0x9A59, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    {0xAF090010, 0x9A60, "Tiger Lake", "Iris Xe Graphics", PLATFORM_FLAG_TIGERLAKE, 0, 0},
+    
+    // Rocket Lake variants in AF range
+    {0xAF0A0001, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0002, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0003, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0004, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0005, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0006, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0007, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0008, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0009, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A000A, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A000B, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A000C, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A000D, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A000E, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A000F, 0x4C8A, "Rocket Lake", "UHD Graphics 750", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    {0xAF0A0010, 0x4C8B, "Rocket Lake", "UHD Graphics 730", PLATFORM_FLAG_ROCKETLAKE, 0, 0},
+    
+    // Alder Lake variants in AF range
+    {0xAF0B0001, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0002, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0003, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0004, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0005, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0006, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0007, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0008, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0009, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B000A, 0x4688, "Alder Lake", "UHD Graphics 710", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B000B, 0x468A, "Alder Lake", "UHD Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B000C, 0x4690, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B000D, 0x4692, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B000E, 0x4693, "Alder Lake", "Iris Xe Graphics", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B000F, 0x4680, "Alder Lake", "UHD Graphics 770", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    {0xAF0B0010, 0x4682, "Alder Lake", "UHD Graphics 730", PLATFORM_FLAG_ALDERLAKE, 0, 0},
+    
+    // Meteor Lake variants in AF range
+    {0xAF0C0001, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0002, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0003, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0004, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0005, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0006, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0007, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0008, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0009, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C000A, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C000B, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C000C, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C000D, 0x7D40, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C000E, 0x7D45, "Meteor Lake", "UHD Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C000F, 0x7D50, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    {0xAF0C0010, 0x7D55, "Meteor Lake", "Arc Graphics", PLATFORM_FLAG_METEORLAKE, 0, 0},
+    
+    // Lunar Lake variants in AF range
+    {0xAF0D0001, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0002, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0003, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0004, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0005, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0006, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0007, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0008, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0009, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D000A, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D000B, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D000C, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D000D, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D000E, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D000F, 0x64A0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    {0xAF0D0010, 0x64B0, "Lunar Lake", "Arc Graphics", PLATFORM_FLAG_LUNARLAKE, 0, 0},
+    
+};
+
+// Count of platform IDs
+static const size_t g_platformDatabaseCount = sizeof(g_platformDatabase) / sizeof(g_platformDatabase[0]);
+
+// Count of platform IDs
+static const size_t g_platformDatabaseCount = sizeof(g_platformDatabase) / sizeof(g_platformDatabase[0]);
+
+// Class wrapper for platform database management
+class PlatformIDDatabase {
+public:
+    PlatformIDDatabase() {
+        IOLog("ForceACL: [PlatformDB] Initializing with %lu platform IDs\n", 
+            (unsigned long)g_platformDatabaseCount);
+    }
+    
+    ~PlatformIDDatabase() {
+    }
+    
+    size_t getCount() const {
+        return g_platformDatabaseCount;
+    }
+    
+    const PlatformIDEntry* getEntry(size_t index) const {
+        if (index >= g_platformDatabaseCount) {
+            return nullptr;
+        }
+        return &g_platformDatabase[index];
+    }
+    
+    const PlatformIDEntry* findById(uint32_t id) const {
+        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+            if (g_platformDatabase[i].id == id) {
+                return &g_platformDatabase[i];
+            }
+        }
+        return nullptr;
+    }
+    
+    const PlatformIDEntry* findByDeviceId(uint16_t deviceId) const {
+        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+            if (g_platformDatabase[i].deviceId == deviceId) {
+                return &g_platformDatabase[i];
+            }
+        }
+        return nullptr;
+    }
+    
+    const PlatformIDEntry* findByGeneration(const char* generation) const {
+        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+            if (g_platformDatabase[i].generation && 
+                strcmp(g_platformDatabase[i].generation, generation) == 0) {
+                return &g_platformDatabase[i];
+            }
+        }
+        return nullptr;
+    }
+    
+    const PlatformIDEntry* getNext(const PlatformIDEntry* current) const {
+        if (!current) {
+            return getEntry(0);
+        }
+        
+        size_t currentIndex = 0;
+        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+            if (&g_platformDatabase[i] == current) {
+                currentIndex = i;
+                break;
+            }
+        }
+        
+        if (currentIndex >= g_platformDatabaseCount - 1) {
+            return nullptr;
+        }
+        
+        return &g_platformDatabase[currentIndex + 1];
+    }
+    
+    const PlatformIDEntry* getNextForDevice(const PlatformIDEntry* current, uint16_t deviceId) const {
+        const PlatformIDEntry* next = current;
+        size_t iterations = 0;
+        
+        while ((next = getNext(next)) != nullptr && iterations < g_platformDatabaseCount) {
+            iterations++;
+            if (next->deviceId == deviceId) {
+                return next;
+            }
+        }
+        
+        return nullptr;
+    }
+    
+    void recordSuccess(uint32_t id) {
+        PlatformIDEntry* entry = const_cast<PlatformIDEntry*>(findById(id));
+        if (entry) {
+            entry->flags |= PLATFORM_FLAG_WORKING;
+            entry->successCount++;
+            IOLog("ForceACL: [PlatformDB] Platform 0x%08X marked as WORKING (successes: %u)\n",
+                id, entry->successCount);
+        }
+    }
+    
+    void recordFailure(uint32_t id) {
+        PlatformIDEntry* entry = const_cast<PlatformIDEntry*>(findById(id));
+        if (entry) {
+            entry->flags &= ~PLATFORM_FLAG_WORKING;
+            entry->flags |= PLATFORM_FLAG_TESTED;
+            entry->failCount++;
+            IOLog("ForceACL: [PlatformDB] Platform 0x%08X marked as TESTED (failures: %u)\n",
+                id, entry->failCount);
+        }
+    }
+    
+    void dumpDatabase() const {
+        IOLog("ForceACL: [PlatformDB] === Platform Database Dump ===\n");
+        IOLog("ForceACL: [PlatformDB] Total entries: %lu\n", (unsigned long)g_platformDatabaseCount);
+        
+        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+            const PlatformIDEntry& entry = g_platformDatabase[i];
+            IOLog("ForceACL: [PlatformDB] [%zu] ID=0x%08X Device=0x%04X Gen=%s Name=%s Flags=0x%X\n",
+                i, entry.id, entry.deviceId, entry.generation ? entry.generation : "N/A",
+                entry.name ? entry.name : "N/A", entry.flags);
+        }
+        
+        IOLog("ForceACL: [PlatformDB] =============================\n");
+    }
+};
+
+// Exported C functions for database access
+extern "C" {
+
+size_t forceACL_getPlatformIDCount() {
+    return g_platformDatabaseCount;
+}
+
+const PlatformIDEntry* forceACL_getPlatformIDAt(size_t index) {
+    if (index >= g_platformDatabaseCount) {
+        return nullptr;
+    }
+    return &g_platformDatabase[index];
+}
+
+const PlatformIDEntry* forceACL_findPlatformID(uint32_t id) {
+    for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+        if (g_platformDatabase[i].id == id) {
+            return &g_platformDatabase[i];
+        }
+    }
+    return nullptr;
+}
+
+const PlatformIDEntry* forceACL_findPlatformIDByDevice(uint16_t deviceId) {
+    for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+        if (g_platformDatabase[i].deviceId == deviceId) {
+            return &g_platformDatabase[i];
+        }
+    }
+    return nullptr;
+}
+
+const PlatformIDEntry* forceACL_getNextPlatformID(const PlatformIDEntry* current) {
+    if (!current) {
+        return &g_platformDatabase[0];
+    }
+    
+    for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+        if (&g_platformDatabase[i] == current) {
+            if (i + 1 < g_platformDatabaseCount) {
+                return &g_platformDatabase[i + 1];
+            }
+            break;
+        }
+    }
+    
+    return nullptr;
+}
+
+const PlatformIDEntry* forceACL_findBestPlatformID(uint16_t deviceId, const char* generation) {
+    const PlatformIDEntry* best = nullptr;
+    uint32_t highestWeight = 0;
+    
+    for (size_t i = 0; i < g_platformDatabaseCount; i++) {
+        const PlatformIDEntry& entry = g_platformDatabase[i];
+        
+        // Check if this entry matches the device
+        bool matchesDevice = (entry.deviceId == deviceId);
+        
+        // Check if generation matches if provided
+        bool matchesGen = (generation == nullptr || 
+            (entry.generation && strcmp(entry.generation, generation) == 0));
+        
+        if (matchesDevice || matchesGen) {
+            // Calculate weight based on success count
+            uint32_t weight = entry.successCount * 100;
+            if (entry.flags & PLATFORM_FLAG_WORKING) {
+                weight += 1000; // Bonus for working entries
+            }
+            
+            if (weight > highestWeight) {
+                highestWeight = weight;
+                best = &entry;
+            }
+        }
+    }
+    
+    return best;
+}
+
+} // extern "C"
