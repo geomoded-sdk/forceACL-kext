@@ -261,4 +261,4 @@ For more help, check logs in Console.app or create an issue on GitHub.
 
 ## License
 
-This project is for educational purposes. Use at your own risk.
+This project is under of apache 2.0 lisense.
