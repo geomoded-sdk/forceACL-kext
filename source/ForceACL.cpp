@@ -102,7 +102,10 @@ bool ForceACLPlugin::start() {
     // Handle mode
     handleMode();
     
-    // Process GPUs
+    // Early GPU detection and injection (BEFORE framebuffer initialization)
+    performEarlyGPUInjection();
+    
+    // Process GPUs (fallback)
     processGPUs();
     
     m_state = PluginState::Active;
@@ -300,6 +303,235 @@ void ForceACLPlugin::initializeComponents() {
     FORCEACL_LOG_VERBOSE("All components initialized");
 }
 
+void ForceACLPlugin::performEarlyGPUInjection() {
+    FORCEACL_LOG("Performing early GPU injection (before framebuffer init)...");
+    
+    if (m_mode == FFACLMode::Disabled) {
+        FORCEACL_LOG("Safe mode - skipping early GPU injection");
+        return;
+    }
+    
+    // Find Intel iGPU in IORegistry before driver initialization
+    IOPCIDevice* igpuDevice = findIntelIGPU();
+    if (!igpuDevice) {
+        FORCEACL_LOG_VERBOSE("No Intel iGPU found in early detection");
+        return;
+    }
+    
+    uint16_t deviceID = igpuDevice->configRead16(2);
+    FORCEACL_LOG("Early detection: Intel iGPU 0x%04X found", deviceID);
+    
+    // Decide platform ID using AI engine (ONE decision per boot)
+    uint32_t platformId = decidePlatformIDForIGPU(deviceID);
+    if (platformId == 0) {
+        FORCEACL_LOG_ERROR("Failed to decide platform ID for iGPU");
+        return;
+    }
+    
+    FORCEACL_LOG("Selected platform ID for early injection: 0x%08X", platformId);
+    
+    // Inject properties directly into the device BEFORE driver loads
+    bool success = injectPlatformIDEarly(igpuDevice, platformId);
+    
+    if (success) {
+        FORCEACL_LOG("*** EARLY PLATFORM INJECTION SUCCESSFUL ***");
+        FORCEACL_LOG("  Platform ID: 0x%08X injected before framebuffer init", platformId);
+        
+        // Cache the successful injection
+        if (m_nvramManager) {
+            m_nvramManager->setCachedPlatformID(platformId);
+            m_nvramManager->setCachedWorking(true);
+        }
+        
+        m_injectionComplete = true;
+    } else {
+        FORCEACL_LOG_ERROR("Early platform injection failed");
+        
+        // Delay boot to allow user intervention
+        if (m_aiEngine && m_aiEngine->shouldDelayBoot()) {
+            m_aiEngine->performBootDelay();
+        }
+    }
+    
+    igpuDevice->release();
+}
+
+IOPCIDevice* ForceACLPlugin::findIntelIGPU() {
+    // Search for Intel iGPU in PCI space
+    // Typical path: PciRoot(0x0)/Pci(0x2,0x0) or /PCI0@0/IGPU@2
+    
+    // Method 1: Use IORegistry to find PCI devices
+    IORegistryIterator* iterator = IORegistryIterator::iterateOver(
+        gIOServicePlane, kIORegistryIterateRecursively);
+    
+    if (!iterator) {
+        FORCEACL_LOG_VERBOSE("Could not create IORegistry iterator");
+        return nullptr;
+    }
+    
+    IORegistryEntry* entry;
+    while ((entry = iterator->getNextObject())) {
+        IOPCIDevice* device = OSDynamicCast(IOPCIDevice, entry);
+        if (device) {
+            uint16_t vendorID = device->configRead16(0);
+            uint16_t deviceID = device->configRead16(2);
+            uint8_t classCode = device->configRead8(0x0B);
+            uint8_t subclassCode = device->configRead8(0x0A);
+            
+            // Check for Intel GPU (vendor 0x8086, class 0x03)
+            if (vendorID == 0x8086 && classCode == 0x03 && 
+                (subclassCode == 0x00 || subclassCode == 0x02)) {
+                
+                FORCEACL_LOG_VERBOSE("Found Intel GPU: 0x%04X at %s", 
+                    deviceID, device->getName());
+                
+                iterator->release();
+                return device; // Retain count increased by OSDynamicCast
+            }
+        }
+    }
+    
+    iterator->release();
+    
+    // Method 2: Try common PCI paths
+    const char* commonPaths[] = {
+        "/PCI0@0/IGPU@2",
+        "/PCI0@0/IGPU@0,2",
+        "/PciRoot(0x0)/Pci(0x2,0x0)",
+        nullptr
+    };
+    
+    for (int i = 0; commonPaths[i]; i++) {
+        IORegistryEntry* entry = IORegistryEntry::fromPath(commonPaths[i], gIOServicePlane);
+        if (entry) {
+            IOPCIDevice* device = OSDynamicCast(IOPCIDevice, entry);
+            if (device) {
+                uint16_t vendorID = device->configRead16(0);
+                if (vendorID == 0x8086) {
+                    FORCEACL_LOG_VERBOSE("Found Intel iGPU at path: %s", commonPaths[i]);
+                    return device;
+                }
+            }
+            entry->release();
+        }
+    }
+    
+    FORCEACL_LOG_VERBOSE("Intel iGPU not found in early detection");
+    return nullptr;
+}
+
+uint32_t ForceACLPlugin::decidePlatformIDForIGPU(uint16_t deviceID) {
+    // Check cached working ID first
+    if (m_nvramManager) {
+        uint32_t cachedId = m_nvramManager->getCachedPlatformID();
+        if (m_nvramManager->isCachedWorking() && cachedId != 0) {
+            FORCEACL_LOG("Using cached working platform ID: 0x%08X", cachedId);
+            return cachedId;
+        }
+    }
+    
+    // Use AI engine to make ONE decision
+    if (m_aiEngine && m_platformDB) {
+        uint32_t decidedId = m_aiEngine->decidePlatformID(deviceID, m_platformDB);
+        if (decidedId != 0) {
+            FORCEACL_LOG("AI Engine decided platform ID: 0x%08X", decidedId);
+            return decidedId;
+        }
+    }
+    
+    // Fallback to community knowledge
+    if (m_aiEngine) {
+        uint32_t communityId = m_aiEngine->findBestCommunityPlatformId(deviceID);
+        if (communityId != 0) {
+            FORCEACL_LOG("Using community-recommended platform ID: 0x%08X", communityId);
+            return communityId;
+        }
+    }
+    
+    // Last resort: generation-specific defaults
+    GPUGeneration gen = m_gpuDetector ? m_gpuDetector->detectGeneration(deviceID) : GPUGeneration::Unknown;
+    switch (gen) {
+        case GPUGeneration::SandyBridge: return 0x00030010;
+        case GPUGeneration::IvyBridge: return 0x01660009;
+        case GPUGeneration::Haswell: return 0x0D220003;
+        case GPUGeneration::Broadwell: return 0x16060000;
+        case GPUGeneration::Skylake: return 0x19160000;
+        case GPUGeneration::KabyLake: return 0x59160000;
+        case GPUGeneration::CoffeeLake: return 0x3EA50000;
+        case GPUGeneration::CometLake: return 0x9BC80003;
+        case GPUGeneration::IceLake: return 0x8A530000;
+        case GPUGeneration::TigerLake: return 0x9A500000;
+        case GPUGeneration::RocketLake: return 0x4C610000;
+        case GPUGeneration::AlderLakeS: return 0x46800000;
+        case GPUGeneration::MeteorLake: return 0x7D450000;
+        case GPUGeneration::LunarLake: return 0x64A00000;
+        default: return 0x0D220003; // Haswell fallback
+    }
+}
+
+bool ForceACLPlugin::injectPlatformIDEarly(IOPCIDevice* device, uint32_t platformId) {
+    if (!device) {
+        FORCEACL_LOG_ERROR("Early injection: null device");
+        return false;
+    }
+    
+    // Create platform-id data (big-endian)
+    uint32_t platformIdBE = OSSwapHostToBigInt32(platformId);
+    OSData* platformData = OSData::withBytes(&platformIdBE, sizeof(platformIdBE));
+    if (!platformData) {
+        FORCEACL_LOG_ERROR("Failed to create platform-id data");
+        return false;
+    }
+    
+    // Inject AAPL,ig-platform-id property
+    bool success = device->setProperty("AAPL,ig-platform-id", platformData);
+    
+    if (success) {
+        FORCEACL_LOG("Injected AAPL,ig-platform-id: 0x%08X", platformId);
+        
+        // Also inject other common properties for better compatibility
+        injectAdditionalIGPUProperties(device, platformId);
+    } else {
+        FORCEACL_LOG_ERROR("Failed to inject AAPL,ig-platform-id");
+    }
+    
+    platformData->release();
+    return success;
+}
+
+void ForceACLPlugin::injectAdditionalIGPUProperties(IOPCIDevice* device, uint32_t platformId) {
+    // Inject device-id if needed (for spoofing)
+    uint32_t deviceId = 0;
+    switch (platformId & 0x0000FFFF) { // Extract device ID from platform ID
+        case 0x1916: deviceId = 0x19168086; break; // Skylake
+        case 0x5916: deviceId = 0x59168086; break; // Kaby Lake
+        case 0x3EA5: deviceId = 0x3EA58086; break; // Coffee Lake
+        case 0x9BC8: deviceId = 0x9BC88086; break; // Comet Lake
+        case 0x8A53: deviceId = 0x8A538086; break; // Ice Lake
+        case 0x9A50: deviceId = 0x9A508086; break; // Tiger Lake
+        case 0x4C61: deviceId = 0x4C618086; break; // Rocket Lake
+        case 0x4680: deviceId = 0x46808086; break; // Alder Lake
+        default: break;
+    }
+    
+    if (deviceId != 0) {
+        uint32_t deviceIdBE = OSSwapHostToBigInt32(deviceId);
+        OSData* deviceData = OSData::withBytes(&deviceIdBE, sizeof(deviceIdBE));
+        if (deviceData) {
+            device->setProperty("device-id", deviceData);
+            FORCEACL_LOG("Injected device-id: 0x%08X", deviceId);
+            deviceData->release();
+        }
+    }
+    
+    // Inject AAPL,GfxYTile to enable graphics acceleration
+    OSData* gfxTileData = OSData::withBytes("1", 1);
+    device->setProperty("AAPL,GfxYTile", gfxTileData);
+    gfxTileData->release();
+    
+    FORCEACL_LOG("Injected additional iGPU properties");
+}
+
 void ForceACLPlugin::hookIOServices() {
     FORCEACL_LOG_VERBOSE("Hooking IOServices...");
     
@@ -349,7 +581,13 @@ bool ForceACLPlugin::handlePCIDevice(IOPCIDevice* device) {
     if (!device) return false;
     
     auto* instance = getInstance();
-    if (!instance || instance->m_injectionComplete) return false;
+    if (!instance) return false;
+    
+    // If early injection already completed, skip
+    if (instance->m_injectionComplete) {
+        FORCEACL_LOG_VERBOSE("Early injection already completed, skipping PCI hook");
+        return false;
+    }
     
     if (instance->m_mode == FFACLMode::Disabled) {
         FORCEACL_LOG_VERBOSE("Safe mode - ignoring PCI device");
@@ -384,8 +622,8 @@ bool ForceACLPlugin::handlePCIDevice(IOPCIDevice* device) {
         return false;
     }
     
-    // This is an Intel GPU
-    FORCEACL_LOG("*** INTEL GPU DETECTED ***");
+    // This is an Intel GPU - perform late injection as fallback
+    FORCEACL_LOG("*** INTEL GPU DETECTED (Late Hook) ***");
     FORCEACL_LOG("  Vendor: 0x%04X (Intel)", vendorID);
     FORCEACL_LOG("  Device: 0x%04X", deviceID);
     FORCEACL_LOG("  Class: 0x%02X%02X00", classCode, subclassCode);
@@ -404,100 +642,47 @@ bool ForceACLPlugin::handlePCIDevice(IOPCIDevice* device) {
     
     instance->m_detectedGPUs.push_back(gpuInfo);
     
-    // Process GPU for injection
-    instance->processGPUDevice(device);
+    // Perform late injection as fallback (should not happen if early injection worked)
+    instance->performLateGPUInjection(device);
     
     return true;
 }
 
-void ForceACLPlugin::processGPUDevice(IOPCIDevice* device) {
-    if (m_injectionComplete) {
-        FORCEACL_LOG_VERBOSE("Injection already complete, skipping");
-        return;
-    }
-    
-    if (m_mode == FFACLMode::Disabled) {
-        FORCEACL_LOG("Safe mode - skipping GPU injection");
-        return;
-    }
+void ForceACLPlugin::performLateGPUInjection(IOPCIDevice* device) {
+    FORCEACL_LOG("Performing late GPU injection (fallback - should not happen if early injection worked)");
     
     uint16_t deviceID = device->configRead16(2);
     
-    FORCEACL_LOG("Processing GPU device 0x%04X...", deviceID);
-    
-    // Get cached platform ID from NVRAM
-    uint32_t cachedPlatformId = 0;
-    bool cachedWorking = false;
-    
+    // Try to get cached platform ID
+    uint32_t platformId = 0;
     if (m_nvramManager) {
-        cachedPlatformId = m_nvramManager->getCachedPlatformID();
-        cachedWorking = m_nvramManager->isCachedWorking();
-        
-        if (cachedPlatformId) {
-            FORCEACL_LOG("Found cached platform ID: 0x%08X", cachedPlatformId);
-            FORCEACL_LOG("Cached working state: %s", cachedWorking ? "YES" : "NO");
+        platformId = m_nvramManager->getCachedPlatformID();
+        if (m_nvramManager->isCachedWorking() && platformId != 0) {
+            FORCEACL_LOG("Using cached platform ID for late injection: 0x%08X", platformId);
         }
     }
     
-    uint32_t platformIdToUse = 0;
+    if (platformId == 0) {
+        // Fallback decision
+        platformId = decidePlatformIDForIGPU(deviceID);
+        FORCEACL_LOG("Late injection platform ID: 0x%08X", platformId);
+    }
     
-    if (cachedWorking && cachedPlatformId != 0) {
-        // Use cached platform ID
-        platformIdToUse = cachedPlatformId;
-        FORCEACL_LOG("Using cached working platform ID: 0x%08X", platformIdToUse);
+    // Attempt late injection
+    bool success = injectPlatformIDEarly(device, platformId);
+    
+    if (success) {
+        FORCEACL_LOG("*** LATE PLATFORM INJECTION SUCCESSFUL ***");
+        m_injectionComplete = true;
     } else {
-        // Use AI engine to decide
-        if (m_aiEngine) {
-            platformIdToUse = m_aiEngine->decidePlatformID(deviceID, m_platformDB);
-            FORCEACL_LOG("AI Engine selected platform ID: 0x%08X", platformIdToUse);
-        } else {
-            // Fallback to default Haswell
-            platformIdToUse = 0x0D220003;
-            FORCEACL_LOG("Using default platform ID: 0x%08X", platformIdToUse);
-        }
+        FORCEACL_LOG_ERROR("Late platform injection failed - graphics may not work");
         
-        // Save as last attempted
-        if (m_nvramManager) {
-            m_nvramManager->setLastAttemptedID(platformIdToUse);
+        // Delay boot as last resort
+        if (m_aiEngine && m_aiEngine->shouldDelayBoot()) {
+            m_aiEngine->performBootDelay();
         }
     }
-    
-    // Inject platform properties
-    if (m_gpuInjector) {
-        bool success = m_gpuInjector->injectProperties(device, platformIdToUse);
-        
-        if (success) {
-            FORCEACL_LOG("*** PLATFORM INJECTION SUCCESSFUL ***");
-            FORCEACL_LOG("  Platform ID: 0x%08X", platformIdToUse);
-            
-            // Save to NVRAM
-            if (m_nvramManager) {
-                m_nvramManager->setCachedPlatformID(platformIdToUse);
-                m_nvramManager->setCachedWorking(true);
-            }
-            
-            m_injectionComplete = true;
-        } else {
-            FORCEACL_LOG_ERROR("Platform injection FAILED");
-            
-            // Try next platform ID
-            if (m_aiEngine) {
-                uint32_t nextId = m_aiEngine->getNextPlatformID(deviceID, m_platformDB);
-                if (nextId != platformIdToUse) {
-                    FORCEACL_LOG("Attempting next platform ID: 0x%08X", nextId);
-                    // Could implement retry logic here
-                }
-            }
-            
-            // Mark as not working
-            if (m_nvramManager) {
-                m_nvramManager->setCachedWorking(false);
-            }
-            
-            // Report error
-            if (m_errorHandler) {
-                m_errorHandler->reportError(ERROR_GPU_INJECTION_FAILED, 
-                    "Failed to inject platform ID");
+}
             }
         }
     }

@@ -7,31 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.4.0] - 2026-04-08
 ### Added
+- **Early GPU Injection**: Platform ID injection occurs BEFORE framebuffer initialization, ensuring proper timing
+- **Single Decision per Boot**: AI engine makes ONE platform ID decision per boot, eliminating ineffective retries
+- **Pre-Driver Property Injection**: Properties injected directly into PCI device before AppleIntelFramebuffer loads
+- **Timing-Critical Architecture**: Complete redesign to work within macOS GPU initialization sequence
 - **Graphics Acceleration Detection**: Comprehensive verification system to ensure platform IDs provide working graphics acceleration
 - **Intelligent Caching System**: NVRAM-based caching of working/failed platform IDs to avoid repeating unsuccessful attempts
-- **AA-AG Platform ID Database**: Massive expansion with 1000+ platform IDs in the AA-AG range (0xAA000000 to 0xAGFFFFFF)
-- **Boot Delay Mechanism**: Automatic 5-second delay with warning when no working platform ID is found, allowing user intervention
+- **AA-AG Platform ID Database**: Massive expansion with 1000+ platform IDs in the comprehensive AA-AG range for exhaustive testing
+- **Boot Delay Mechanism**: Automatic 5-second delay with warning when no working platform ID is found
 - **QE/CI Validation**: Hardware-accelerated graphics verification through PCI configuration and memory access tests
 - **IOGraphics Acceleration Checking**: Integration with macOS graphics framework for proper acceleration validation
 
-### Enhanced
-- **AI Decision Engine**: Now includes acceleration testing and caching logic for more reliable platform ID selection
-- **GPU Detector**: Extended with graphics acceleration detection methods and memory access validation
-- **Platform Database**: Expanded with comprehensive AA-AG range coverage for exhaustive testing
-- **NVRAM Manager**: Enhanced with intelligent caching of platform ID success/failure states
+### Changed
+- **Injection Timing**: Moved from post-GPU-init to pre-driver-load for guaranteed effectiveness
+- **Decision Strategy**: Single intelligent decision per boot instead of brute-force iteration
+- **Fallback Logic**: Simplified to use cached working IDs or community knowledge, no runtime testing
 
-### Technical Improvements
-- Graphics memory mapping and access validation
-- PCI device capability checking for QE/CI support
-- IOGraphics framework integration for acceleration verification
-- Boot-time decision making with user intervention capability
-- Persistent caching across reboots for optimal performance
-
-### Safety Features
-- Automatic fallback to best available platform ID if no acceleration is detected
-- User warning and delay mechanism for troubleshooting
-- Comprehensive error handling for graphics device detection
-- Memory safety checks during graphics acceleration testing
+### Breaking Changes
+- Removed brute-force platform ID testing (ineffective after GPU init)
+- Changed injection timing to pre-driver-load (correct macOS behavior)
+- Simplified decision logic to one per boot (maintains all AI features)
 
 ## [2.3.0] - 2026-04-08
 ### Added

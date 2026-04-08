@@ -78,15 +78,7 @@ uint32_t AIDecisionEngine::decidePlatformID(uint16_t deviceId, PlatformIDDatabas
         }
     }
 
-    // Try AA-AG range platform IDs with acceleration checking
-    uint32_t aa_ag_id = getNextAA_AG_PlatformID(deviceId, db);
-    if (aa_ag_id != 0) {
-        if (testAndCachePlatformID(aa_ag_id, deviceId)) {
-            return aa_ag_id;
-        }
-    }
-
-    // Fallback to heuristic-based selection
+    // Fallback to heuristic-based selection (ONE decision per boot)
     GPUDetector detector;
     GPUGeneration gen = detector.detectGeneration(deviceId);
 
@@ -154,7 +146,7 @@ uint32_t AIDecisionEngine::decidePlatformID(uint16_t deviceId, PlatformIDDatabas
         }
     }
 
-    // Test the best candidate
+    // Test the best candidate (ONE test per boot)
     if (testAndCachePlatformID(bestId, deviceId)) {
         FORCEACL_LOG_VERBOSE("AI Engine: Selected and tested 0x%08X (score: %u) for device 0x%04X",
                             bestId, bestScore, deviceId);

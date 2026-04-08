@@ -195,13 +195,34 @@ ForceACL.kext includes advanced graphics acceleration verification and intellige
 
 ## How It Works
 
-1. Detects OCLP by checking NVRAM keys (`OCLP-Settings`, `revpatch`, `revblock`)
-2. Reads `ffacl` boot argument to determine mode
-3. Checks cached working platform ID from NVRAM
-4. If cached ID provides graphics acceleration, uses it directly
-5. Otherwise, tests platform IDs from AA-AG range with acceleration verification
-6. Caches successful IDs and marks failed ones for future avoidance
-7. If no working ID found after extensive testing, delays boot with warning
+ForceACL.kext implements a **timing-critical architecture** that ensures platform ID injection occurs at the correct moment in the macOS boot sequence:
+
+### Critical Timing Requirements
+
+1. **Early Detection**: Plugin detects Intel iGPU in IORegistry before any driver attachment
+2. **Pre-Decision**: AI engine makes ONE intelligent platform ID decision using cached data and community knowledge
+3. **Pre-Injection**: Properties injected directly into PCI device BEFORE AppleIntelFramebuffer loads
+4. **System Initialization**: macOS framebuffer initializes with correct platform ID already in place
+
+### Why This Matters
+
+- **macOS GPU Architecture**: Framebuffer initialization is a one-way process - platform IDs cannot be changed after driver load
+- **Timing Window**: Injection must occur after kernel init but before GPU driver attachment
+- **Single Decision**: Multiple attempts are ineffective - only the initial configuration matters
+- **Acceleration Guarantee**: Proper timing ensures QE/CI activation and full graphics acceleration
+
+### Boot Process Integration
+
+```
+Kernel Init → Lilu Load → ForceACL Start → Early GPU Detection → Platform ID Decision → Property Injection → Framebuffer Init → Graphics Ready
+```
+
+### Fallback Mechanisms
+
+- **Cached Working IDs**: Instantly uses previously successful platform IDs
+- **Community Knowledge**: Leverages 400+ real-world compatibility reports
+- **Generation Defaults**: Falls back to proven platform IDs for each GPU generation
+- **Boot Delay**: 5-second warning if no suitable platform ID found, allowing user intervention
 
 ## Troubleshooting
 
