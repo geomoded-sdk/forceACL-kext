@@ -19,6 +19,9 @@
 #include "ForceACL/HookManager.hpp"
 #include "ForceACL/ErrorHandler.hpp"
 #include "ForceACL/AIDecisionEngine.hpp"
+#include "ForceACL/GPUPropertiesManager.hpp"
+#include "ForceACL/ConnectorFixer.hpp"
+#include "ForceACL/FramebufferPatcher.hpp"
 
 #include <Lilu/kern_api.hpp>
 #include <Lilu/kern_util.hpp>
@@ -46,6 +49,9 @@ ForceACLPlugin::ForceACLPlugin()
     , m_nvramManager(nullptr)
     , m_hookManager(nullptr)
     , m_errorHandler(nullptr)
+    , m_gpuPropertiesManager(nullptr)
+    , m_connectorFixer(nullptr)
+    , m_framebufferPatcher(nullptr)
 {
     FORCEACL_LOG("Constructor called");
 }
@@ -60,6 +66,9 @@ ForceACLPlugin::~ForceACLPlugin() {
     if (m_nvramManager) delete m_nvramManager;
     if (m_hookManager) delete m_hookManager;
     if (m_errorHandler) delete m_errorHandler;
+    if (m_gpuPropertiesManager) delete m_gpuPropertiesManager;
+    if (m_connectorFixer) delete m_connectorFixer;
+    if (m_framebufferPatcher) delete m_framebufferPatcher;
 }
 
 bool ForceACLPlugin::init() {
@@ -288,6 +297,28 @@ void ForceACLPlugin::initializeComponents() {
         return;
     }
     FORCEACL_LOG_VERBOSE("  - Error Handler initialized");
+    
+    // Initialize WhateverGreen-compatible modules
+    m_gpuPropertiesManager = new GPUPropertiesManager();
+    if (!m_gpuPropertiesManager) {
+        FORCEACL_LOG_ERROR("Failed to initialize GPU Properties Manager");
+        return;
+    }
+    FORCEACL_LOG_VERBOSE("  - GPU Properties Manager initialized (WhateverGreen-compatible)");
+    
+    m_connectorFixer = new ConnectorFixer();
+    if (!m_connectorFixer) {
+        FORCEACL_LOG_ERROR("Failed to initialize Connector Fixer");
+        return;
+    }
+    FORCEACL_LOG_VERBOSE("  - Connector Fixer initialized (DP-to-HDMI conversion, bus ID mapping)");
+    
+    m_framebufferPatcher = new FramebufferPatcher();
+    if (!m_framebufferPatcher) {
+        FORCEACL_LOG_ERROR("Failed to initialize Framebuffer Patcher");
+        return;
+    }
+    FORCEACL_LOG_VERBOSE("  - Framebuffer Patcher initialized (binary framebuffer patching)");
     
     FORCEACL_LOG_VERBOSE("All components initialized");
 }
@@ -701,160 +732,135 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
         return;
     }
 
-    FORCEACL_LOG_VERBOSE("Injecting platform ID 0x%08X with enhanced properties", platformId);
+    FORCEACL_LOG("=================================================================");
+    FORCEACL_LOG("*** PLATFORM PROPERTIES INJECTION STARTING ***");
+    FORCEACL_LOG("  Platform ID: 0x%08X", platformId);
+    FORCEACL_LOG("=================================================================");
 
-    // Inject AAPL,ig-platform-id
-    OSData* platformData = OSData::withBytes(&platformId, sizeof(platformId));
-    if (platformData) {
-        device->setProperty("AAPL,ig-platform-id", platformData);
-        platformData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: AAPL,ig-platform-id = 0x%08X", platformId);
-    }
+    bool allSuccess = true;
 
-    // === FAKE VRAM ADJUSTMENT (IORegistry override) ===
-    uint32_t vramSizeMB = 0;
-    if (platformId >= 0x01660000 && platformId <= 0x0166FFFF) { // Sandy Bridge
-        vramSizeMB = 512;
-    } else if (platformId >= 0x01620000 && platformId <= 0x0162FFFF) { // Ivy Bridge
-        vramSizeMB = 1024;
-    } else if (platformId >= 0x0D220000 && platformId <= 0x0D22FFFF) { // Haswell
-        vramSizeMB = 1536;
-    } else if (platformId >= 0x19020000 && platformId <= 0x1926FFFF) { // Skylake+
-        vramSizeMB = 2048;
+    // ==================== IGPU PROPERTIES ====================
+    if (m_gpuPropertiesManager) {
+        FORCEACL_LOG(">>> Injecting IGPU base properties via GPUPropertiesManager");
+        m_gpuPropertiesManager->injectIGPUProperties(device, platformId);
+        FORCEACL_LOG("    Core IGPU properties injected");
     } else {
-        vramSizeMB = 1024; // Default 1GB
+        // Fallback: inject basic platform ID
+        FORCEACL_LOG_VERBOSE("  [FALLBACK] Injecting basic AAPL,ig-platform-id");
+        OSData* platformData = OSData::withBytes(&platformId, sizeof(platformId));
+        if (platformData) {
+            device->setProperty("AAPL,ig-platform-id", platformData);
+            platformData->release();
+        }
     }
 
-    OSData* vramData = OSData::withBytes(&vramSizeMB, sizeof(vramSizeMB));
-    if (vramData) {
-        device->setProperty("AAPL,VRAM,totalMB", vramData);
-        device->setProperty("VRAM,totalMB", vramData);
-        vramData->release();
-        FORCEACL_LOG("  Injected: Fake VRAM = %u MB", vramSizeMB);
+    // ==================== FRAMEBUFFER PROPERTIES ====================
+    if (m_gpuPropertiesManager) {
+        FORCEACL_LOG(">>> Injecting Framebuffer configuration properties");
+        m_gpuPropertiesManager->injectFramebufferProperties(device, platformId);
+        FORCEACL_LOG("    Framebuffer properties injected (stolen memory, cursor, pipes)");
     }
 
-    // === DVMT FIX ===
-    uint32_t dvmtPreAlloc = 64; // 64MB DVMT pre-allocated
-    uint32_t dvmtTotal = 1024;   // 1GB DVMT total
-
-    OSData* dvmtPreData = OSData::withBytes(&dvmtPreAlloc, sizeof(dvmtPreAlloc));
-    if (dvmtPreData) {
-        device->setProperty("AAPL,DVMT,preallocMB", dvmtPreData);
-        dvmtPreData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: DVMT pre-allocated = %u MB", dvmtPreAlloc);
+    // ==================== CONNECTOR PROPERTIES & FIXES ====================
+    if (m_gpuPropertiesManager) {
+        FORCEACL_LOG(">>> Injecting Connector configuration (auto-fix enabled)");
+        m_gpuPropertiesManager->injectConnectorProperties(device, platformId);
+        FORCEACL_LOG("    Connectors injected with auto-fixes (DP-to-HDMI, bus IDs, pipes)");
+        // Note: ConnectorFixer is applied during binary framebuffer patching phase
+        // if FramebufferPatcher::applyPatches() is invoked
+    } else {
+        FORCEACL_LOG_VERBOSE("  [WARNING] GPUPropertiesManager not available - connector injection skipped");
     }
 
-    OSData* dvmtTotalData = OSData::withBytes(&dvmtTotal, sizeof(dvmtTotal));
-    if (dvmtTotalData) {
-        device->setProperty("AAPL,DVMT,totalMB", dvmtTotalData);
-        dvmtTotalData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: DVMT total = %u MB", dvmtTotal);
+    // ==================== HDMI/LSPCON PROPERTIES ====================
+    if (m_gpuPropertiesManager) {
+        FORCEACL_LOG(">>> Injecting HDMI Configuration (including LSPCON for DP bridges)");
+        m_gpuPropertiesManager->injectHDMIProperties(device, platformId);
+        m_gpuPropertiesManager->injectLSPCONProperties(device, platformId);
+        FORCEACL_LOG("    HDMI modes, LSPCON adaptation enabled");
     }
 
-    // === CONNECTORS CORRECTION ===
-    // Define corrected connector data for common display configurations
-    struct ConnectorInfo {
-        uint32_t index;
-        uint32_t busId;
-        uint32_t pipe;
-        uint32_t type;
-        uint32_t flags;
-    };
-
-    ConnectorInfo connectors[] = {
-        {0, 0x05, 0, 0x00000400, 0x00000000}, // DisplayPort
-        {1, 0x04, 1, 0x00000800, 0x00000000}, // HDMI
-        {2, 0x06, 2, 0x00000200, 0x00000000}  // DVI
-    };
-
-    OSData* connectorData = OSData::withBytes(connectors, sizeof(connectors));
-    if (connectorData) {
-        device->setProperty("AAPL,connector", connectorData);
-        connectorData->release();
-        FORCEACL_LOG("  Injected: Corrected connectors for %zu displays", sizeof(connectors)/sizeof(ConnectorInfo));
+    // ==================== ACCELERATION PROPERTIES ====================
+    if (m_gpuPropertiesManager) {
+        FORCEACL_LOG(">>> Injecting GPU Acceleration properties (Metal/QE/CI/GVA)");
+        m_gpuPropertiesManager->injectMetalProperties(device, platformId);
+        FORCEACL_LOG("    Metal rendering paths, QuartzExtreme (QE), CoreImage (CI) enabled");
     }
 
-    // === AUTOMATIC FRAMEBUFFER PATCH ===
+    // ==================== MEMORY PROPERTIES ====================
+    if (m_gpuPropertiesManager) {
+        FORCEACL_LOG(">>> Injecting Memory allocation properties (VRAM & DVMT)");
+        m_gpuPropertiesManager->injectVRAMProperties(device, platformId);
+        m_gpuPropertiesManager->injectDVMTProperties(device, platformId);
+        FORCEACL_LOG("    Fake VRAM and DVMT pre-allocation configured");
+    } else {
+        // Fallback VRAM injection
+        FORCEACL_LOG_VERBOSE("  [FALLBACK] Injecting VRAM fallback values");
+        uint32_t vramSizeMB = 1024; // Safe default
+        OSData* vramData = OSData::withBytes(&vramSizeMB, sizeof(vramSizeMB));
+        if (vramData) {
+            device->setProperty("AAPL,VRAM,totalMB", vramData);
+            device->setProperty("VRAM,totalMB", vramData);
+            vramData->release();
+        }
+        
+        uint32_t dvmtPreAlloc = 64;
+        OSData* dvmtPreData = OSData::withBytes(&dvmtPreAlloc, sizeof(dvmtPreAlloc));
+        if (dvmtPreData) {
+            device->setProperty("AAPL,DVMT,preallocMB", dvmtPreData);
+            dvmtPreData->release();
+        }
+    }
+
+    // ==================== AUDIO/BACKLIGHT PROPERTIES ====================
+    if (m_gpuPropertiesManager) {
+        FORCEACL_LOG(">>> Injecting Display and Audio support properties");
+        m_gpuPropertiesManager->injectBacklightProperties(device, platformId);
+        FORCEACL_LOG("    Backlight control, display configuration enabled");
+    }
+
+    // ==================== POWER MANAGEMENT PROPERTIES ====================
+    if (m_gpuPropertiesManager) {
+        FORCEACL_LOG(">>> Injecting Power Management and GPU Control properties");
+        m_gpuPropertiesManager->injectPowerManagementProperties(device, platformId);
+        m_gpuPropertiesManager->injectFBCProperties(device, platformId);
+        FORCEACL_LOG("    Power management, frame buffer compression configured");
+    }
+
+    // ==================== BINARY FRAMEBUFFER PATCHING ===== ==========
+    if (m_framebufferPatcher) {
+        FORCEACL_LOG(">>> Applying Binary Framebuffer Patches (automatic patch detection)");
+        bool fbPatchSuccess = m_framebufferPatcher->applyPatches(device, platformId);
+        if (fbPatchSuccess) {
+            FORCEACL_LOG("    ✓ Framebuffer binary patches applied successfully");
+        } else {
+            FORCEACL_LOG_VERBOSE("    ⚠ Framebuffer binary patches: not available or already patched");
+        }
+    } else {
+        FORCEACL_LOG_VERBOSE("  [FALLBACK] FramebufferPatcher not available - binary patching skipped");
+    }
+
+    // ==================== INJECT FRAMEWORK FLAGS ====================
+    FORCEACL_LOG(">>> Injecting Framework Integration Flags");
+    
     uint32_t fbPatchEnabled = 1;
     OSData* fbPatchData = OSData::withBytes(&fbPatchEnabled, sizeof(fbPatchEnabled));
     if (fbPatchData) {
         device->setProperty("AAPL,framebuffer-patch", fbPatchData);
         fbPatchData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: Automatic framebuffer patch enabled");
     }
 
-    // Additional framebuffer properties
-    uint32_t cursorBytes = 0x100000; // 1MB cursor memory
-    OSData* cursorData = OSData::withBytes(&cursorBytes, sizeof(cursorBytes));
-    if (cursorData) {
-        device->setProperty("AAPL,cursor-bytes", cursorData);
-        cursorData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: Cursor memory = %u bytes", cursorBytes);
+    // Inject framework version for compatibility
+    const char* fwVersion = "3.9.2"; // Simulated framework version
+    OSData* fwData = OSData::withBytes(fwVersion, strlen(fwVersion) + 1);
+    if (fwData) {
+        device->setProperty("AAPL,fw-version", fwData);
+        fwData->release();
     }
 
-    // Inject additional properties
-    const char* model = "Intel HD Graphics";
-    OSData* modelData = OSData::withBytes(model, strlen(model) + 1);
-    if (modelData) {
-        device->setProperty("model", modelData);
-        modelData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: model");
-    }
-
-    const char* slotName = "Built-in";
-    OSData* slotData = OSData::withBytes(slotName, strlen(slotName) + 1);
-    if (slotData) {
-        device->setProperty("AAPL,slot-name", slotData);
-        slotData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: AAPL,slot-name");
-    }
-
-    // Inject class-code override for proper matching
-    uint32_t classCode = 0x030000;
-    OSData* classData = OSData::withBytes(&classCode, sizeof(classCode));
-    if (classData) {
-        device->setProperty("class-code", classData);
-        classData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: class-code");
-    }
-
-    // Inject device-type
-    const char* deviceType = "display";
-    OSData* typeData = OSData::withBytes(deviceType, strlen(deviceType) + 1);
-    if (typeData) {
-        device->setProperty("device_type", typeData);
-        typeData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: device_type");
-    }
-
-    // Inject graphics control properties
-    const char* gfxYTile = "1";
-    OSData* yTileData = OSData::withBytes(gfxYTile, strlen(gfxYTile) + 1);
-    if (yTileData) {
-        device->setProperty("AAPL,GfxYTile", yTileData);
-        yTileData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: AAPL,GfxYTile");
-    }
-
-    // Inject backlight control
-    uint32_t backlightControl = 0x01;
-    OSData* backlightData = OSData::withBytes(&backlightControl, sizeof(backlightControl));
-    if (backlightData) {
-        device->setProperty("AAPL,backlight-control", backlightData);
-        backlightData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: AAPL,backlight-control");
-    }
-
-    // Inject display pipe configuration
-    uint32_t dualLink = 0x01;
-    OSData* dualLinkData = OSData::withBytes(&dualLink, sizeof(dualLink));
-    if (dualLinkData) {
-        device->setProperty("AAPL00,DualLink", dualLinkData);
-        dualLinkData->release();
-        FORCEACL_LOG_VERBOSE("  Injected: AAPL00,DualLink");
-    }
-
-    FORCEACL_LOG("Enhanced platform injection complete for 0x%08X", platformId);
+    FORCEACL_LOG("=================================================================");
+    FORCEACL_LOG("*** PLATFORM PROPERTIES INJECTION COMPLETE (0x%08X) ***", platformId);
+    FORCEACL_LOG("=================================================================");
 }
 
 void ForceACLPlugin::processGPUs() {

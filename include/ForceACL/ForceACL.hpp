@@ -47,6 +47,9 @@ class AIDecisionEngine;
 class NVRAMManager;
 class HookManager;
 class ErrorHandler;
+class GPUPropertiesManager;
+class ConnectorFixer;
+class FramebufferPatcher;
 
 // Plugin state
 enum class PluginState {
@@ -184,6 +187,11 @@ private:
     NVRAMManager* m_nvramManager;
     HookManager* m_hookManager;
     ErrorHandler* m_errorHandler;
+    
+    // WhateverGreen-compatible modules
+    GPUPropertiesManager* m_gpuPropertiesManager;
+    ConnectorFixer* m_connectorFixer;
+    FramebufferPatcher* m_framebufferPatcher;
     
     void parseBootArguments();
     void detectOCLP();

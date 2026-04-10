@@ -1,122 +1,144 @@
 /**
  * ForceACL - NVRAM Manager Implementation
- * Manages NVRAM operations for storing GPU settings
+ * Manages platform ID caching and AI state in NVRAM.
  */
 
 #include <libkern/libkern.h>
-#include <IOKit/IOService.h>
+#include <IOKit/IOKitKeys.h>
 #include <IOKit/IORegistryEntry.h>
+#include <libkern/OSData.h>
+#include <libkern/OSString.h>
 
 #include "ForceACL/NVRAMManager.hpp"
 
 NVRAMManager::NVRAMManager()
-    : m_nvramRoot(nullptr)
-    , m_verboseLogging(false)
+    : m_cachedPlatformId(0)
+    , m_cachedWorking(false)
+    , m_lastAttemptedId(0)
+    , m_triedIdsCount(0)
+    , m_aiDecisionCount(0)
 {
-    NVRAM_LOG_VERBOSE("NVRAMManager initialized");
-
-    // Get NVRAM root
-    m_nvramRoot = IORegistryEntry::fromPath("/options", gIOServicePlane);
+    for (size_t i = 0; i < sizeof(m_triedIds)/sizeof(m_triedIds[0]); i++) {
+        m_triedIds[i] = 0;
+    }
 }
 
-NVRAMManager::~NVRAMManager() {
-    if (m_nvramRoot) {
-        m_nvramRoot->release();
-    }
-    NVRAM_LOG_VERBOSE("NVRAMManager destroyed");
+NVRAMManager::~NVRAMManager() {}
+
+IORegistryEntry* NVRAMManager::getOptionsEntry() {
+    return IORegistryEntry::fromPath("/options", gIOServicePlane);
 }
 
-bool NVRAMManager::readProperty(const char* key, void* buffer, size_t* size) {
-    if (!m_nvramRoot || !key || !buffer || !size) {
-        return false;
+OSObject* NVRAMManager::readNVRAMKey(const char* key) {
+    if (!key) {
+        return nullptr;
     }
 
-    OSObject* value = m_nvramRoot->getProperty(key);
-    if (!value) {
-        NVRAM_LOG_VERBOSE("NVRAM property not found: %s", key);
-        return false;
+    IORegistryEntry* options = getOptionsEntry();
+    if (!options) {
+        return nullptr;
     }
 
-    OSData* data = OSDynamicCast(OSData, value);
-    if (!data) {
-        NVRAM_LOG_VERBOSE("NVRAM property not OSData: %s", key);
-        return false;
-    }
-
-    size_t dataSize = data->getLength();
-    if (dataSize > *size) {
-        NVRAM_LOG_VERBOSE("NVRAM buffer too small for: %s", key);
-        return false;
-    }
-
-    memcpy(buffer, data->getBytesNoCopy(), dataSize);
-    *size = dataSize;
-
-    NVRAM_LOG_VERBOSE("Read NVRAM property: %s", key);
-    return true;
+    OSObject* value = options->getProperty(key);
+    options->release();
+    return value;
 }
 
-bool NVRAMManager::writeProperty(const char* key, const void* data, size_t size) {
-    if (!m_nvramRoot || !key || !data) {
+bool NVRAMManager::writeNVRAMKey(const char* key, const void* data, size_t length) {
+    if (!key || !data || length == 0) {
         return false;
     }
 
-    OSData* osData = OSData::withBytes(data, size);
+    IORegistryEntry* options = getOptionsEntry();
+    if (!options) {
+        return false;
+    }
+
+    OSData* osData = OSData::withBytes(data, length);
     if (!osData) {
-        NVRAM_LOG_VERBOSE("Failed to create OSData for: %s", key);
+        options->release();
         return false;
     }
 
-    m_nvramRoot->setProperty(key, osData);
+    bool success = options->setProperty(key, osData);
     osData->release();
-
-    NVRAM_LOG_VERBOSE("Wrote NVRAM property: %s", key);
-    return true;
+    options->release();
+    return success;
 }
 
-bool NVRAMManager::deleteProperty(const char* key) {
-    if (!m_nvramRoot || !key) {
-        return false;
+uint32_t NVRAMManager::getCachedPlatformID() {
+    return m_cachedPlatformId;
+}
+
+void NVRAMManager::setCachedPlatformID(uint32_t platformId) {
+    m_cachedPlatformId = platformId;
+    writeNVRAMKey("ffacl_cached_platform_id", &m_cachedPlatformId, sizeof(m_cachedPlatformId));
+}
+
+bool NVRAMManager::isCachedWorking() {
+    return m_cachedWorking;
+}
+
+void NVRAMManager::setCachedWorking(bool working) {
+    m_cachedWorking = working;
+    uint32_t value = working ? 1 : 0;
+    writeNVRAMKey("ffacl_cached_working", &value, sizeof(value));
+}
+
+uint32_t NVRAMManager::getLastAttemptedID() {
+    return m_lastAttemptedId;
+}
+
+void NVRAMManager::setLastAttemptedID(uint32_t platformId) {
+    m_lastAttemptedId = platformId;
+    writeNVRAMKey("ffacl_last_attempted_id", &m_lastAttemptedId, sizeof(m_lastAttemptedId));
+}
+
+uint32_t NVRAMManager::getTriedIDsCount() {
+    return m_triedIdsCount;
+}
+
+void NVRAMManager::addTriedID(uint32_t platformId) {
+    if (m_triedIdsCount >= sizeof(m_triedIds)/sizeof(m_triedIds[0])) {
+        return;
     }
 
-    m_nvramRoot->removeProperty(key);
-
-    NVRAM_LOG_VERBOSE("Deleted NVRAM property: %s", key);
-    return true;
+    m_triedIds[m_triedIdsCount++] = platformId;
 }
 
-bool NVRAMManager::propertyExists(const char* key) {
-    if (!m_nvramRoot || !key) {
-        return false;
-    }
-
-    return m_nvramRoot->getProperty(key) != nullptr;
-}
-
-void NVRAMManager::setVerboseLogging(bool verbose) {
-    m_verboseLogging = verbose;
-}
-
-bool NVRAMManager::storePlatformID(uint32_t platformId) {
-    return writeProperty("ffacl-platform-id", &platformId, sizeof(platformId));
-}
-
-bool NVRAMManager::getStoredPlatformID(uint32_t* platformId) {
-    size_t size = sizeof(uint32_t);
-    return readProperty("ffacl-platform-id", platformId, &size);
-}
-
-bool NVRAMManager::storeBootSuccess(bool success) {
-    uint32_t successFlag = success ? 1 : 0;
-    return writeProperty("ffacl-boot-success", &successFlag, sizeof(successFlag));
-}
-
-bool NVRAMManager::getBootSuccess(bool* success) {
-    uint32_t successFlag = 0;
-    size_t size = sizeof(uint32_t);
-    if (readProperty("ffacl-boot-success", &successFlag, &size)) {
-        *success = (successFlag != 0);
-        return true;
+bool NVRAMManager::hasTriedID(uint32_t platformId) {
+    for (uint32_t i = 0; i < m_triedIdsCount; i++) {
+        if (m_triedIds[i] == platformId) {
+            return true;
+        }
     }
     return false;
+}
+
+void NVRAMManager::clearTriedIDs() {
+    m_triedIdsCount = 0;
+    memset(m_triedIds, 0, sizeof(m_triedIds));
+}
+
+uint32_t NVRAMManager::getAIDecisionCount() {
+    return m_aiDecisionCount;
+}
+
+void NVRAMManager::incrementAIDecisionCount() {
+    m_aiDecisionCount++;
+}
+
+void NVRAMManager::logNVRAMStatus() {
+    NVRAM_LOG("Cached platform ID: 0x%08X", m_cachedPlatformId);
+    NVRAM_LOG("Cached working: %u", m_cachedWorking);
+    NVRAM_LOG("Tried IDs: %u", m_triedIdsCount);
+    NVRAM_LOG("AI decisions: %u", m_aiDecisionCount);
+}
+
+void NVRAMManager::clearAllCache() {
+    m_cachedPlatformId = 0;
+    m_cachedWorking = false;
+    m_lastAttemptedId = 0;
+    clearTriedIDs();
+    m_aiDecisionCount = 0;
 }
