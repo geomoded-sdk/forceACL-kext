@@ -4,7 +4,7 @@
  */
 
 #include <stdint.h>
-#include <cstring>
+#include <stddef.h>
 
 // Community-sourced platform ID compatibility data
 // Based on reports from Olarila, Reddit r/hackintosh, TonyMac, InsanelyMac

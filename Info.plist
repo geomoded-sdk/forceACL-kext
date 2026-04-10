@@ -7,7 +7,7 @@
     <key>CFBundleExecutable</key>
     <string>ForceWACL</string>
     <key>CFBundleIdentifier</key>
-    <string>com.forcewacl.kext</string>
+    <string>com.forceacl.kext</string>
     <key>CFBundleInfoDictionaryVersion</key>
     <string>6.0</string>
     <key>CFBundleName</key>

@@ -1,0 +1,6 @@
+--2026-04-10 00:17:22--  https://upnow-prod.ff45e40d1a1c8f7e7de4e976d0c9e555.r2.cloudflarestorage.com/EvSZjGkTahVsMB1OliGHU5og77D2/9ae5a110-eac0-44c1-99d4-6857930e34f5?X-Amz-Algorithm=AWS4-HMAC-SHA256
+Resolving upnow-prod.ff45e40d1a1c8f7e7de4e976d0c9e555.r2.cloudflarestorage.com (upnow-prod.ff45e40d1a1c8f7e7de4e976d0c9e555.r2.cloudflarestorage.com)... 172.64.66.1, 2606:4700:2ff9::1
+Connecting to upnow-prod.ff45e40d1a1c8f7e7de4e976d0c9e555.r2.cloudflarestorage.com (upnow-prod.ff45e40d1a1c8f7e7de4e976d0c9e555.r2.cloudflarestorage.com)|172.64.66.1|:443... connected.
+HTTP request sent, awaiting response... 400 Bad Request
+2026-04-10 00:17:22 ERROR 400: Bad Request.
+

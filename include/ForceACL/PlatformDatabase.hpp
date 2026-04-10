@@ -9,16 +9,20 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// Platform ID structure
+enum class GPUGeneration;
+
 struct PlatformIDEntry {
-    uint32_t id;
-    uint16_t deviceId;
-    const char* generation;
-    const char* name;
-    uint32_t flags;
+    uint32_t id = 0;
+    uint16_t deviceId = 0;
+    const char* generation = nullptr;
+    const char* name = nullptr;
+    uint32_t flags = 0;
+    uint32_t confidence = 0;
+    uint32_t communityVerified = 0;
+    uint32_t successCount = 0;
+    uint32_t failCount = 0;
 };
 
-// Platform ID flags
 #define PLATFORM_FLAG_HASWELL    0x00000001
 #define PLATFORM_FLAG_BROADWELL  0x00000002
 #define PLATFORM_FLAG_SKYLAKE    0x00000004
@@ -36,15 +40,21 @@ struct PlatformIDEntry {
 #define PLATFORM_FLAG_TESTED    0x10000000
 #define PLATFORM_FLAG_WORKING   0x20000000
 
-// Database functions
-extern "C" {
+class PlatformIDDatabase {
+public:
+    PlatformIDDatabase();
+    ~PlatformIDDatabase();
+    
+    size_t getCount() const;
+    const PlatformIDEntry* findPlatformID(uint32_t id) const;
+    const PlatformIDEntry* findPlatformIDByDevice(uint16_t deviceId) const;
+    const PlatformIDEntry* getNextPlatformID(const PlatformIDEntry* current) const;
+    const PlatformIDEntry* findBestPlatformID(uint16_t deviceId, GPUGeneration gen) const;
+    const PlatformIDEntry** getPlatformIDsForDevice(uint16_t deviceId, size_t* count) const;
+    
+private:
+    size_t m_count;
+    const PlatformIDEntry* m_database;
+};
 
-const PlatformIDEntry* forceACL_getPlatformIDDatabase(size_t* count);
-const PlatformIDEntry* forceACL_findPlatformID(uint32_t id);
-const PlatformIDEntry* forceACL_findPlatformIDByDevice(uint16_t deviceId);
-const PlatformIDEntry* forceACL_getNextPlatformID(const PlatformIDEntry* current);
-const PlatformIDEntry* forceACL_findBestPlatformID(uint16_t deviceId, const char* generation);
-
-} // extern "C"
-
-#endif // FORCEACL_PLATFORM_DATABASE_HPP
+#endif

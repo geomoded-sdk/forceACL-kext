@@ -3,16 +3,19 @@
  * Lilu plugin bootstrap and initialization
  */
 
-#include <Library/Library.h>
-#include <Lilu/kern_api.hpp>
-#include <Lilu/kern_util.hpp>
-#include <Lilu/kern_iokit.hpp>
+#include <libkern/libkern.h>
+#include <mach/mach_time.h>
+#include <IOKit/IOService.h>
 
 #include "ForceACL/ForceACL.hpp"
 
 // Global verbose and debug flags
 bool gForceACLVerbose = false;
 bool gForceACLDebug = false;
+
+extern "C" {
+int PE_parse_boot_arg_num(const char* arg, void* value);
+}
 
 // Plugin entry point - called by Lilu
 void PLUGIN_ENTRY() {
@@ -33,36 +36,4 @@ void PLUGIN_ENTRY() {
         plugin->init();
         plugin->start();
     }
-}
-
-// Alternative entry point for direct load
-extern "C" {
-    
-    kern_return_t ForceACL_start(kmod_info_t* ki, void* d) {
-        IOLog("ForceACL v%s - Starting via kmod\n", PLUGIN_VERSION);
-        
-        if (PE_parse_boot_arg_num("v", nullptr)) {
-            gForceACLVerbose = true;
-        }
-        
-        auto* plugin = ForceACLPlugin::getInstance();
-        if (plugin) {
-            plugin->init();
-            plugin->start();
-        }
-        
-        return KERN_SUCCESS;
-    }
-    
-    kern_return_t ForceACL_stop(kmod_info_t* ki, void* d) {
-        IOLog("ForceACL v%s - Stopping\n", PLUGIN_VERSION);
-        
-        auto* plugin = ForceACLPlugin::getInstance();
-        if (plugin) {
-            plugin->stop();
-        }
-        
-        return KERN_SUCCESS;
-    }
-    
 }

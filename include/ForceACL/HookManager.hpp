@@ -20,14 +20,22 @@ public:
     
     void setVerboseLogging(bool verbose);
     
+    // Public callback methods for external access
+    bool pciDeviceCallback(void* device);
+    bool framebufferCallback(void* service);
+    bool serviceMatchingCallback(void* service);
+    
 private:
     bool m_pciHookRegistered;
     bool m_framebufferHookRegistered;
     bool m_verboseLogging;
     
-    static bool pciDeviceCallback(void* device);
-    static bool framebufferCallback(void* service);
-    static bool serviceMatchingCallback(void* service);
+    // Private helper methods
+    void applyFramebufferPatches(IOService* framebuffer);
+    void applyFakeVRAMOverride(IOService* framebuffer);
+    void applyDVMTFix(IOService* framebuffer);
+    void applyConnectorsCorrection(IOService* framebuffer);
+    void applyAutomaticFramebufferPatch(IOService* framebuffer);
 };
 
 // Logging macros

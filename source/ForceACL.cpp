@@ -3,23 +3,13 @@
  * Core plugin logic and management
  */
 
-#include <Lilu/kern_api.hpp>
-#include <Lilu/kern_util.hpp>
-#include <Lilu/kern_iokit.hpp>
-
+#include <libkern/libkern.h>
+#include <libkern/OSBase.h>
+#include <mach/mach_time.h>
 #include <IOKit/IOService.h>
 #include <IOKit/pci/IOPCIDevice.h>
 #include <IOKit/IOMessage.h>
 #include <IOKit/IOKitKeys.h>
-#include <IOKit/graphics/IOGraphicsInterface.h>
-
-#include <libkern/libkern.h>
-#include <libkern/OSBase.h>
-#include <mach/mach_time.h>
-
-#include <cstdint>
-#include <cstring>
-#include <cstdio>
 
 #include "ForceACL/ForceACL.hpp"
 #include "ForceACL/PlatformDatabase.hpp"
@@ -30,9 +20,8 @@
 #include "ForceACL/ErrorHandler.hpp"
 #include "ForceACL/AIDecisionEngine.hpp"
 
-// Global instances
-bool gForceACLVerbose = false;
-bool gForceACLDebug = false;
+#include <Lilu/kern_api.hpp>
+#include <Lilu/kern_util.hpp>
 
 // Plugin instance
 ForceACLPlugin* ForceACLPlugin::m_instance = nullptr;
@@ -158,9 +147,9 @@ void ForceACLPlugin::parseBootArguments() {
     
     // Additional boot arguments for fine-tuning
     char bootArgBuf[256];
-    size_t bufSize = sizeof(bootArgBuf);
+    int bufSize = sizeof(bootArgBuf);
     
-    if (PE_parse_boot_arg("ffacl_platform_id", bootArgBuf, &bufSize)) {
+    if (PE_parse_boot_arg("ffacl_platform_id", bootArgBuf, bufSize)) {
         if (bufSize >= sizeof(bootArgBuf)) {
             FORCEACL_LOG_ERROR("Boot argument ffacl_platform_id too long, truncated");
         }
@@ -534,46 +523,68 @@ void ForceACLPlugin::injectAdditionalIGPUProperties(IOPCIDevice* device, uint32_
 
 void ForceACLPlugin::hookIOServices() {
     FORCEACL_LOG_VERBOSE("Hooking IOServices...");
-    
+
     if (m_mode == FFACLMode::Disabled) {
         FORCEACL_LOG_VERBOSE("Safe mode - not hooking GPU services");
         return;
     }
-    
+
+    // Register HookManager hooks for advanced patching
+    if (m_hookManager) {
+        bool pciHookSuccess = m_hookManager->registerPCIHook();
+        bool fbHookSuccess = m_hookManager->registerFramebufferHook();
+        bool serviceHookSuccess = m_hookManager->registerServiceHooks();
+
+        if (pciHookSuccess && fbHookSuccess && serviceHookSuccess) {
+            FORCEACL_LOG("HookManager hooks registered successfully");
+        } else {
+            FORCEACL_LOG_ERROR("Some HookManager hooks failed to register");
+        }
+    }
+
     // Hook into PCI device enumeration using Lilu
-    if (LiluAPI::Version::atLeast(LiluAPI::Version::Parse(1, 6, 0))) {
+    if (lilu.atLeast(0x10600)) {
         FORCEACL_LOG_VERBOSE("Using Lilu 1.6+ PCI hook");
-        
-        lilu.onPciDevice(IOPCIDevice::serviceName(), 
-            [](IOPCIDevice* device) -> bool {
-                return ForceACLPlugin::getInstance()->handlePCIDevice(device);
+
+        lilu.onPciDevice(IOPCIDevice_serviceName(),
+            [](void* device) -> bool {
+                return ForceACLPlugin::getInstance()->handlePCIDevice(static_cast<IOPCIDevice*>(device));
             });
-        
+
         FORCEACL_LOG_VERBOSE("PCI device hook registered");
     } else {
         // Fallback for older Lilu versions
         FORCEACL_LOG_VERBOSE("Using legacy IOService hook");
-        
-        lilu.onIOService("IOPCIDevice", 
-            [](IOService* service) -> bool {
-                IOPCIDevice* device = OSDynamicCast(IOPCIDevice, service);
+
+        lilu.onIOService("IOPCIDevice",
+            [](void* service) -> bool {
+                IOPCIDevice* device = static_cast<IOPCIDevice*>(service);
                 if (device) {
                     return ForceACLPlugin::getInstance()->handlePCIDevice(device);
                 }
                 return false;
             });
-        
+
         FORCEACL_LOG_VERBOSE("Legacy IOService hook registered");
     }
-    
-    // Also hook into IOService for additional detection
-    lilu.onIOService("IOFramebuffer", 
-        [](IOService* service) -> bool {
-            FORCEACL_LOG_VERBOSE("IOFramebuffer detected: %s", 
-                service->getName());
+
+    // Hook into AppleIntelFramebuffer for advanced patching
+    lilu.onIOService("AppleIntelFramebuffer",
+        [](void* service) -> bool {
+            IOService* fb = static_cast<IOService*>(service);
+            FORCEACL_LOG("AppleIntelFramebuffer detected: %s",
+                fb->getName());
+
+            // Apply advanced framebuffer patches
+            auto* instance = ForceACLPlugin::getInstance();
+            if (instance && instance->m_hookManager) {
+                // Call HookManager framebuffer callback
+                return instance->m_hookManager->framebufferCallback(service);
+            }
+
             return false;
         });
-    
+
     FORCEACL_LOG_VERBOSE("IOServices hooks complete");
 }
 
@@ -683,19 +694,15 @@ void ForceACLPlugin::performLateGPUInjection(IOPCIDevice* device) {
         }
     }
 }
-            }
-        }
-    }
-}
 
 void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t platformId) {
     if (!device) {
         FORCEACL_LOG_ERROR("injectPlatformProperties: null device");
         return;
     }
-    
-    FORCEACL_LOG_VERBOSE("Injecting platform ID 0x%08X", platformId);
-    
+
+    FORCEACL_LOG_VERBOSE("Injecting platform ID 0x%08X with enhanced properties", platformId);
+
     // Inject AAPL,ig-platform-id
     OSData* platformData = OSData::withBytes(&platformId, sizeof(platformId));
     if (platformData) {
@@ -703,7 +710,88 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
         platformData->release();
         FORCEACL_LOG_VERBOSE("  Injected: AAPL,ig-platform-id = 0x%08X", platformId);
     }
-    
+
+    // === FAKE VRAM ADJUSTMENT (IORegistry override) ===
+    uint32_t vramSizeMB = 0;
+    if (platformId >= 0x01660000 && platformId <= 0x0166FFFF) { // Sandy Bridge
+        vramSizeMB = 512;
+    } else if (platformId >= 0x01620000 && platformId <= 0x0162FFFF) { // Ivy Bridge
+        vramSizeMB = 1024;
+    } else if (platformId >= 0x0D220000 && platformId <= 0x0D22FFFF) { // Haswell
+        vramSizeMB = 1536;
+    } else if (platformId >= 0x19020000 && platformId <= 0x1926FFFF) { // Skylake+
+        vramSizeMB = 2048;
+    } else {
+        vramSizeMB = 1024; // Default 1GB
+    }
+
+    OSData* vramData = OSData::withBytes(&vramSizeMB, sizeof(vramSizeMB));
+    if (vramData) {
+        device->setProperty("AAPL,VRAM,totalMB", vramData);
+        device->setProperty("VRAM,totalMB", vramData);
+        vramData->release();
+        FORCEACL_LOG("  Injected: Fake VRAM = %u MB", vramSizeMB);
+    }
+
+    // === DVMT FIX ===
+    uint32_t dvmtPreAlloc = 64; // 64MB DVMT pre-allocated
+    uint32_t dvmtTotal = 1024;   // 1GB DVMT total
+
+    OSData* dvmtPreData = OSData::withBytes(&dvmtPreAlloc, sizeof(dvmtPreAlloc));
+    if (dvmtPreData) {
+        device->setProperty("AAPL,DVMT,preallocMB", dvmtPreData);
+        dvmtPreData->release();
+        FORCEACL_LOG_VERBOSE("  Injected: DVMT pre-allocated = %u MB", dvmtPreAlloc);
+    }
+
+    OSData* dvmtTotalData = OSData::withBytes(&dvmtTotal, sizeof(dvmtTotal));
+    if (dvmtTotalData) {
+        device->setProperty("AAPL,DVMT,totalMB", dvmtTotalData);
+        dvmtTotalData->release();
+        FORCEACL_LOG_VERBOSE("  Injected: DVMT total = %u MB", dvmtTotal);
+    }
+
+    // === CONNECTORS CORRECTION ===
+    // Define corrected connector data for common display configurations
+    struct ConnectorInfo {
+        uint32_t index;
+        uint32_t busId;
+        uint32_t pipe;
+        uint32_t type;
+        uint32_t flags;
+    };
+
+    ConnectorInfo connectors[] = {
+        {0, 0x05, 0, 0x00000400, 0x00000000}, // DisplayPort
+        {1, 0x04, 1, 0x00000800, 0x00000000}, // HDMI
+        {2, 0x06, 2, 0x00000200, 0x00000000}  // DVI
+    };
+
+    OSData* connectorData = OSData::withBytes(connectors, sizeof(connectors));
+    if (connectorData) {
+        device->setProperty("AAPL,connector", connectorData);
+        connectorData->release();
+        FORCEACL_LOG("  Injected: Corrected connectors for %zu displays", sizeof(connectors)/sizeof(ConnectorInfo));
+    }
+
+    // === AUTOMATIC FRAMEBUFFER PATCH ===
+    uint32_t fbPatchEnabled = 1;
+    OSData* fbPatchData = OSData::withBytes(&fbPatchEnabled, sizeof(fbPatchEnabled));
+    if (fbPatchData) {
+        device->setProperty("AAPL,framebuffer-patch", fbPatchData);
+        fbPatchData->release();
+        FORCEACL_LOG_VERBOSE("  Injected: Automatic framebuffer patch enabled");
+    }
+
+    // Additional framebuffer properties
+    uint32_t cursorBytes = 0x100000; // 1MB cursor memory
+    OSData* cursorData = OSData::withBytes(&cursorBytes, sizeof(cursorBytes));
+    if (cursorData) {
+        device->setProperty("AAPL,cursor-bytes", cursorData);
+        cursorData->release();
+        FORCEACL_LOG_VERBOSE("  Injected: Cursor memory = %u bytes", cursorBytes);
+    }
+
     // Inject additional properties
     const char* model = "Intel HD Graphics";
     OSData* modelData = OSData::withBytes(model, strlen(model) + 1);
@@ -712,7 +800,7 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
         modelData->release();
         FORCEACL_LOG_VERBOSE("  Injected: model");
     }
-    
+
     const char* slotName = "Built-in";
     OSData* slotData = OSData::withBytes(slotName, strlen(slotName) + 1);
     if (slotData) {
@@ -720,7 +808,7 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
         slotData->release();
         FORCEACL_LOG_VERBOSE("  Injected: AAPL,slot-name");
     }
-    
+
     // Inject class-code override for proper matching
     uint32_t classCode = 0x030000;
     OSData* classData = OSData::withBytes(&classCode, sizeof(classCode));
@@ -729,7 +817,7 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
         classData->release();
         FORCEACL_LOG_VERBOSE("  Injected: class-code");
     }
-    
+
     // Inject device-type
     const char* deviceType = "display";
     OSData* typeData = OSData::withBytes(deviceType, strlen(deviceType) + 1);
@@ -738,6 +826,35 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
         typeData->release();
         FORCEACL_LOG_VERBOSE("  Injected: device_type");
     }
+
+    // Inject graphics control properties
+    const char* gfxYTile = "1";
+    OSData* yTileData = OSData::withBytes(gfxYTile, strlen(gfxYTile) + 1);
+    if (yTileData) {
+        device->setProperty("AAPL,GfxYTile", yTileData);
+        yTileData->release();
+        FORCEACL_LOG_VERBOSE("  Injected: AAPL,GfxYTile");
+    }
+
+    // Inject backlight control
+    uint32_t backlightControl = 0x01;
+    OSData* backlightData = OSData::withBytes(&backlightControl, sizeof(backlightControl));
+    if (backlightData) {
+        device->setProperty("AAPL,backlight-control", backlightData);
+        backlightData->release();
+        FORCEACL_LOG_VERBOSE("  Injected: AAPL,backlight-control");
+    }
+
+    // Inject display pipe configuration
+    uint32_t dualLink = 0x01;
+    OSData* dualLinkData = OSData::withBytes(&dualLink, sizeof(dualLink));
+    if (dualLinkData) {
+        device->setProperty("AAPL00,DualLink", dualLinkData);
+        dualLinkData->release();
+        FORCEACL_LOG_VERBOSE("  Injected: AAPL00,DualLink");
+    }
+
+    FORCEACL_LOG("Enhanced platform injection complete for 0x%08X", platformId);
 }
 
 void ForceACLPlugin::processGPUs() {

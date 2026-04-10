@@ -6,8 +6,7 @@
 #include <Lilu/kern_api.hpp>
 #include <Lilu/kern_util.hpp>
 #include <libkern/libkern.h>
-#include <cstring>
-#include <cstdio>
+#include <stdio.h>
 
 #include "ForceACL/PlatformDatabase.hpp"
 #include "ForceACL/GPUDetector.hpp"
@@ -15,25 +14,25 @@
 // External verbose flag
 extern bool gForceACLVerbose;
 
-// Platform ID database
-struct PlatformIDEntry {
-    uint32_t id;
-    uint16_t deviceId;
-    const char* generation;
-    const char* name;
-    uint32_t flags;
-    uint32_t successCount;
-    uint32_t failCount;
-};
-
-// Platform ID flags
-#define PLATFORM_FLAG_TESTED    0x10000000
-#define PLATFORM_FLAG_WORKING   0x20000000
-#define PLATFORM_FLAG_HASWELL   0x00000001
-#define PLATFORM_FLAG_BROADWELL 0x00000002
-#define PLATFORM_FLAG_SKYLAKE   0x00000004
+// Platform ID flags (must match header)
+#ifndef PLATFORM_FLAG_HASWELL
+#define PLATFORM_FLAG_HASWELL    0x00000001
+#define PLATFORM_FLAG_BROADWELL  0x00000002
+#define PLATFORM_FLAG_SKYLAKE    0x00000004
 #define PLATFORM_FLAG_KABYLAKE  0x00000008
 #define PLATFORM_FLAG_COFFEELAKE 0x00000010
+#define PLATFORM_FLAG_COMETLAKE  0x00000020
+#define PLATFORM_FLAG_ICELAKE    0x00000040
+#define PLATFORM_FLAG_TIGERLAKE  0x00000080
+#define PLATFORM_FLAG_ROCKETLAKE 0x00000100
+#define PLATFORM_FLAG_ALDERLAKE  0x00000200
+#define PLATFORM_FLAG_METEORLAKE 0x00000400
+#define PLATFORM_FLAG_LUNARLAKE  0x00000800
+#define PLATFORM_FLAG_IVYBRIDGE  0x00001000
+#define PLATFORM_FLAG_SANDYBRIDGE 0x00002000
+#define PLATFORM_FLAG_TESTED    0x10000000
+#define PLATFORM_FLAG_WORKING   0x20000000
+#endif
 
 // Large platform ID database (500+ entries)
 // This is organized by GPU generation
@@ -944,7 +943,7 @@ static PlatformIDEntry g_platformDatabase[] = {
     {0xAC050005, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
     {0xAC050006, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
     {0xAC050007, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
-    {0xAC050008, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
+    {0xAC050008, 0x5930, "Kaby Lake", "Iris Plus Graphics 640", PLATFORM_FLAG_KABYLAKE, 0, 0},
     {0xAC050009, 0x5902, "Kaby Lake", "HD Graphics 610", PLATFORM_FLAG_KABYLAKE, 0, 0},
     {0xAC05000A, 0x5912, "Kaby Lake", "HD Graphics 620", PLATFORM_FLAG_KABYLAKE, 0, 0},
     {0xAC05000B, 0x5920, "Kaby Lake", "HD Graphics 630", PLATFORM_FLAG_KABYLAKE, 0, 0},
@@ -1906,129 +1905,6 @@ static PlatformIDEntry g_platformDatabase[] = {
 
 // Count of platform IDs
 static const size_t g_platformDatabaseCount = sizeof(g_platformDatabase) / sizeof(g_platformDatabase[0]);
-
-// Count of platform IDs
-static const size_t g_platformDatabaseCount = sizeof(g_platformDatabase) / sizeof(g_platformDatabase[0]);
-
-// Class wrapper for platform database management
-class PlatformIDDatabase {
-public:
-    PlatformIDDatabase() {
-        IOLog("ForceACL: [PlatformDB] Initializing with %lu platform IDs\n", 
-            (unsigned long)g_platformDatabaseCount);
-    }
-    
-    ~PlatformIDDatabase() {
-    }
-    
-    size_t getCount() const {
-        return g_platformDatabaseCount;
-    }
-    
-    const PlatformIDEntry* getEntry(size_t index) const {
-        if (index >= g_platformDatabaseCount) {
-            return nullptr;
-        }
-        return &g_platformDatabase[index];
-    }
-    
-    const PlatformIDEntry* findById(uint32_t id) const {
-        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
-            if (g_platformDatabase[i].id == id) {
-                return &g_platformDatabase[i];
-            }
-        }
-        return nullptr;
-    }
-    
-    const PlatformIDEntry* findByDeviceId(uint16_t deviceId) const {
-        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
-            if (g_platformDatabase[i].deviceId == deviceId) {
-                return &g_platformDatabase[i];
-            }
-        }
-        return nullptr;
-    }
-    
-    const PlatformIDEntry* findByGeneration(const char* generation) const {
-        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
-            if (g_platformDatabase[i].generation && 
-                strcmp(g_platformDatabase[i].generation, generation) == 0) {
-                return &g_platformDatabase[i];
-            }
-        }
-        return nullptr;
-    }
-    
-    const PlatformIDEntry* getNext(const PlatformIDEntry* current) const {
-        if (!current) {
-            return getEntry(0);
-        }
-        
-        size_t currentIndex = 0;
-        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
-            if (&g_platformDatabase[i] == current) {
-                currentIndex = i;
-                break;
-            }
-        }
-        
-        if (currentIndex >= g_platformDatabaseCount - 1) {
-            return nullptr;
-        }
-        
-        return &g_platformDatabase[currentIndex + 1];
-    }
-    
-    const PlatformIDEntry* getNextForDevice(const PlatformIDEntry* current, uint16_t deviceId) const {
-        const PlatformIDEntry* next = current;
-        size_t iterations = 0;
-        
-        while ((next = getNext(next)) != nullptr && iterations < g_platformDatabaseCount) {
-            iterations++;
-            if (next->deviceId == deviceId) {
-                return next;
-            }
-        }
-        
-        return nullptr;
-    }
-    
-    void recordSuccess(uint32_t id) {
-        PlatformIDEntry* entry = const_cast<PlatformIDEntry*>(findById(id));
-        if (entry) {
-            entry->flags |= PLATFORM_FLAG_WORKING;
-            entry->successCount++;
-            IOLog("ForceACL: [PlatformDB] Platform 0x%08X marked as WORKING (successes: %u)\n",
-                id, entry->successCount);
-        }
-    }
-    
-    void recordFailure(uint32_t id) {
-        PlatformIDEntry* entry = const_cast<PlatformIDEntry*>(findById(id));
-        if (entry) {
-            entry->flags &= ~PLATFORM_FLAG_WORKING;
-            entry->flags |= PLATFORM_FLAG_TESTED;
-            entry->failCount++;
-            IOLog("ForceACL: [PlatformDB] Platform 0x%08X marked as TESTED (failures: %u)\n",
-                id, entry->failCount);
-        }
-    }
-    
-    void dumpDatabase() const {
-        IOLog("ForceACL: [PlatformDB] === Platform Database Dump ===\n");
-        IOLog("ForceACL: [PlatformDB] Total entries: %lu\n", (unsigned long)g_platformDatabaseCount);
-        
-        for (size_t i = 0; i < g_platformDatabaseCount; i++) {
-            const PlatformIDEntry& entry = g_platformDatabase[i];
-            IOLog("ForceACL: [PlatformDB] [%zu] ID=0x%08X Device=0x%04X Gen=%s Name=%s Flags=0x%X\n",
-                i, entry.id, entry.deviceId, entry.generation ? entry.generation : "N/A",
-                entry.name ? entry.name : "N/A", entry.flags);
-        }
-        
-        IOLog("ForceACL: [PlatformDB] =============================\n");
-    }
-};
 
 // Exported C functions for database access
 extern "C" {

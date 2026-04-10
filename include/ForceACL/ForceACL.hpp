@@ -6,33 +6,20 @@
 #ifndef FORCEACL_PLUGIN_HPP
 #define FORCEACL_PLUGIN_HPP
 
-#include <Lilu/kern_api.hpp>
-#include <Lilu/kern_util.hpp>
-#include <Lilu/kern_iokit.hpp>
-
-#include <IOKit/IOService.h>
-#include <IOKit/pci/IOPCIDevice.h>
-#include <IOKit/IOMessage.h>
-#include <IOKit/IOKitKeys.h>
-#include <IOKit/graphics/IOGraphicsInterface.h>
-
 #include <libkern/libkern.h>
 #include <libkern/OSBase.h>
 #include <mach/mach_time.h>
 #include <mach/vm_map.h>
+#include <IOKit/IOService.h>
+#include <IOKit/pci/IOPCIDevice.h>
+#include <IOKit/IOMessage.h>
+#include <IOKit/IOKitKeys.h>
 
-#include <cstdint>
-#include <cstring>
-#include <cctype>
-#include <vector>
-#include <string>
-#include <map>
-#include <algorithm>
+#include <sys/types.h>
 
-// Plugin identification
-#define PLUGIN_NAME "ForceACL"
-#define PLUGIN_IDENTIFIER "com.forcewacl.kext"
+#ifndef PLUGIN_VERSION
 #define PLUGIN_VERSION "2.0.0"
+#endif
 
 // Debug logging macros
 #define FORCEACL_LOG(fmt, args...) \
@@ -121,6 +108,36 @@ struct GPUDeviceInfo {
     bool accelerated;
 };
 
+// Simple vector for kernel use
+template<typename T>
+class ForceACLVector {
+    T* data_;
+    size_t size_;
+    size_t capacity_;
+public:
+    ForceACLVector() : data_(nullptr), size_(0), capacity_(0) {}
+    ~ForceACLVector() { 
+        if (data_) delete[] data_; 
+    }
+    
+    void push_back(const T& val) {
+        if (size_ >= capacity_) {
+            size_t newCap = capacity_ == 0 ? 4 : capacity_ * 2;
+            T* newData = new T[newCap];
+            for (size_t i = 0; i < size_; i++) newData[i] = data_[i];
+            if (data_) delete[] data_;
+            data_ = newData;
+            capacity_ = newCap;
+        }
+        data_[size_++] = val;
+    }
+    
+    size_t size() const { return size_; }
+    T& operator[](size_t idx) { return data_[idx]; }
+    const T& operator[](size_t idx) const { return data_[idx]; }
+    T* data() { return data_; }
+};
+
 // Error codes for GPU acceleration
 #define ERROR_GPU_NOT_DETECTED      0xE0010001
 #define ERROR_GPU_NO_VENDOR        0xE0020002
@@ -157,8 +174,8 @@ private:
     bool m_oclpDetected;
     bool m_injectionComplete;
     
-    std::vector<GPUDeviceInfo> m_detectedGPUs;
-    std::vector<PlatformIDInfo> m_platformIDs;
+    ForceACLVector<GPUDeviceInfo> m_detectedGPUs;
+    ForceACLVector<PlatformIDInfo> m_platformIDs;
     
     PlatformIDDatabase* m_platformDB;
     GPUDetector* m_gpuDetector;
@@ -174,6 +191,14 @@ private:
     void hookIOServices();
     void processGPUs();
     void handleMode();
+    
+    IOPCIDevice* findIntelIGPU();
+    uint32_t decidePlatformIDForIGPU(uint16_t deviceID);
+    bool injectPlatformIDEarly(IOPCIDevice* device, uint32_t platformId);
+    void injectAdditionalIGPUProperties(IOPCIDevice* device, uint32_t platformId);
+    bool handlePCIDevice(IOPCIDevice* device);
+    void performEarlyGPUInjection();
+    void performLateGPUInjection(IOPCIDevice* device);
 };
 
 #endif // FORCEACL_PLUGIN_HPP

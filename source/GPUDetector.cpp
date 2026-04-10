@@ -7,7 +7,6 @@
 #include <Lilu/kern_util.hpp>
 #include <IOKit/pci/IOPCIDevice.h>
 #include <libkern/libkern.h>
-#include <cstring>
 
 #include "ForceACL/GPUDetector.hpp"
 
@@ -480,7 +479,7 @@ const DeviceIDMapping GPUDetector::m_deviceMappings[] = {
     {0x64B0, GPUGeneration::LunarLake, "Arc Graphics", "Intel Arc Graphics"}
 };
 
-const size_t GPUDetector::m_mappingCount = sizeof(m_deviceMappings) / sizeof(m_deviceMappings[0]);
+const size_t GPUDetector::m_deviceMappingCount = sizeof(m_deviceMappings) / sizeof(m_deviceMappings[0]);
 
 GPUDetector::GPUDetector() {
     GPU_DETECT_LOG("GPU Detector initialized");
@@ -490,72 +489,17 @@ GPUDetector::~GPUDetector() {
 }
 
 GPUGeneration GPUDetector::detectGeneration(uint16_t deviceId) {
-    GPUGeneration gen = matchDeviceId(deviceId);
+    GPUGeneration gen = findMapping(deviceId) ? findMapping(deviceId)->generation : GPUGeneration::Unknown;
     
     GPU_DETECT_VERBOSE("Device 0x%04X -> Generation: %s", deviceId, generationToString(gen));
     
     return gen;
 }
 
-GPUGeneration GPUDetector::matchDeviceId(uint16_t deviceId) {
-    for (size_t i = 0; i < m_mappingCount; i++) {
-        if (m_deviceMappings[i].deviceId == deviceId) {
-            return m_deviceMappings[i].generation;
-        }
-    }
-    
-    // Try to detect by device ID ranges
-    // Haswell: 0x04xx
-    if ((deviceId & 0xFF00) == 0x0400) {
-        return GPUGeneration::Haswell;
-    }
-    // Broadwell: 0x16xx
-    if ((deviceId & 0xFF00) == 0x1600) {
-        return GPUGeneration::Broadwell;
-    }
-    // Skylake: 0x19xx
-    if ((deviceId & 0xFF00) == 0x1900) {
-        return GPUGeneration::Skylake;
-    }
-    // Kaby Lake: 0x59xx
-    if ((deviceId & 0xFF00) == 0x5900) {
-        return GPUGeneration::KabyLake;
-    }
-    // Coffee Lake: 0x3Exx
-    if ((deviceId & 0xFF00) == 0x3E00) {
-        return GPUGeneration::CoffeeLake;
-    }
-    // Comet Lake: 0x9Bxx
-    if ((deviceId & 0xFF00) == 0x9B00) {
-        return GPUGeneration::CometLake;
-    }
-    // Ice Lake: 0x8Axx
-    if ((deviceId & 0xFF00) == 0x8A00) {
-        return GPUGeneration::IceLake;
-    }
-    // Tiger Lake: 0x9Axx
-    if ((deviceId & 0xFF00) == 0x9A00) {
-        return GPUGeneration::TigerLake;
-    }
-    // Rocket Lake: 0x4Cxx
-    if ((deviceId & 0xFF00) == 0x4C00) {
-        return GPUGeneration::RocketLake;
-    }
-    // Alder Lake: 0x46xx / 0x4Dxx / 0x4Exx
-    if ((deviceId & 0xFF00) == 0x4600 || (deviceId & 0xFF00) == 0x4D00 || (deviceId & 0xFF00) == 0x4E00) {
-        return GPUGeneration::AlderLakeP;
-    }
-    // Meteor Lake: 0x7Dxx
-    if ((deviceId & 0xFF00) == 0x7D00) {
-        return GPUGeneration::MeteorLake;
-    }
-    // Lunar Lake: 0xB4xx
-    if ((deviceId & 0xFF00) == 0xB400) {
-        return GPUGeneration::LunarLake;
-    }
-    
+GPUGeneration GPUDetector::matchDeviceId(uint16_t deviceId, uint16_t matchId) {
     return GPUGeneration::Unknown;
 }
+
 
 const char* GPUDetector::generationToString(GPUGeneration gen) {
     switch (gen) {
@@ -579,7 +523,7 @@ const char* GPUDetector::generationToString(GPUGeneration gen) {
 }
 
 const char* GPUDetector::getMarketingName(uint16_t deviceId) {
-    for (size_t i = 0; i < m_mappingCount; i++) {
+    for (size_t i = 0; i < m_deviceMappingCount; i++) {
         if (m_deviceMappings[i].deviceId == deviceId) {
             return m_deviceMappings[i].marketingName;
         }

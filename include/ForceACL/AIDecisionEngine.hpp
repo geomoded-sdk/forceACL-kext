@@ -7,10 +7,11 @@
 #define FORCEACL_AIDECISIONENGINE_HPP
 
 #include <stdint.h>
-#include <cstddef>
+#include <stddef.h>
 
 class PlatformIDDatabase;
 class GPUDetector;
+class NVRAMManager;
 
 // Decision weights based on knowledge base
 struct DecisionWeight {
@@ -30,6 +31,14 @@ struct KnowledgeEntry {
     const char* solution;
     uint32_t successRate;
     const char* source;
+};
+
+// Platform ID scoring structure
+struct PlatformIDScore {
+    uint32_t totalScore;
+    uint32_t confidence;
+    uint32_t factors;
+    const char* reason;
 };
 
 class AIDecisionEngine {
@@ -96,6 +105,56 @@ public:
      * @return true if acceleration is active
      */
     bool checkGraphicsAcceleration();
+
+    /**
+     * @brief Get the confidence level of the current decision
+     * @return confidence percentage (0-100)
+     */
+    uint32_t getConfidence() const;
+
+    /**
+     * @brief Get average success rate for a device ID
+     * @param deviceId The device ID to check
+     * @return average success rate percentage
+     */
+    uint32_t getAverageSuccessRate(uint16_t deviceId);
+
+    /**
+     * @brief Find best community platform ID for device
+     * @param deviceId The device ID
+     * @return best platform ID or 0 if none found
+     */
+    uint32_t findBestCommunityPlatformId(uint16_t deviceId);
+
+    /**
+     * @brief Calculate comprehensive score for platform ID
+     * @param platformId The platform ID to score
+     * @param deviceId The device ID
+     * @param gen The GPU generation
+     * @return detailed score structure
+     */
+    PlatformIDScore calculatePlatformIDScore(uint32_t platformId, uint16_t deviceId, GPUGeneration gen);
+
+    /**
+     * @brief Find generic platform ID when device-specific not available
+     * @param deviceId The device ID
+     * @param gen The GPU generation
+     * @return generic platform ID
+     */
+    uint32_t findGenericPlatformID(uint16_t deviceId, GPUGeneration gen);
+
+    /**
+     * @brief Cache AI decision for future boots
+     * @param platformId The selected platform ID
+     * @param deviceId The device ID
+     * @param confidence The confidence level
+     */
+    void cacheDecision(uint32_t platformId, uint16_t deviceId, uint32_t confidence);
+
+private:
+    NVRAMManager* m_nvramManager;
+    uint32_t m_lastDecisionConfidence;
+    const char* m_lastDecisionReason;
     
     /**
      * @brief Test a platform ID and cache the result
@@ -144,6 +203,8 @@ public:
      */
     const KnowledgeEntry* findKnowledgeEntry(uint32_t platformId);
     const char** getRecommendedFixes(const char* issue);
+    uint32_t findBestCommunityPlatformId(uint16_t deviceId);
+    uint32_t getConfidence() const;
     
 private:
     uint32_t m_currentPlatformIndex;

@@ -7,7 +7,7 @@
 #define FORCEACL_COMMUNITYKNOWLEDGEBASE_HPP
 
 #include <stdint.h>
-#include <cstddef>
+#include <stddef.h>
 
 // Forward declarations
 struct CommunityReport;
