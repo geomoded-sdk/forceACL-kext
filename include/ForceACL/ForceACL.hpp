@@ -227,6 +227,11 @@ private:
     bool handlePCIDevice(IOPCIDevice* device);
     void performEarlyGPUInjection();
     void performLateGPUInjection(IOPCIDevice* device);
+    
+    // Brutal Mode internal methods
+    void disableGPUBlacklist();
+    void forceAcceleration();
+    void overrideDriverChecks();
 };
 
 #endif // FORCEACL_PLUGIN_HPP

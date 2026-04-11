@@ -151,10 +151,34 @@ public:
      */
     void cacheDecision(uint32_t platformId, uint16_t deviceId, uint32_t confidence);
 
+    /**
+     * @brief Check if we should delay boot due to no working platform ID
+     * @return true if delay is needed
+     */
+    bool shouldDelayBoot();
+
+    /**
+     * @brief Perform boot delay
+     */
+    void performBootDelay();
+
+    /**
+     * @brief Find knowledge base entry for a platform ID
+     * @param platformId The platform ID to search for
+     * @return Pointer to knowledge entry or nullptr
+     */
+    const KnowledgeEntry* findKnowledgeEntry(uint32_t platformId);
+    const char** getRecommendedFixes(const char* issue);
+
 private:
     NVRAMManager* m_nvramManager;
     uint32_t m_lastDecisionConfidence;
     const char* m_lastDecisionReason;
+    uint32_t m_currentPlatformIndex;
+    uint32_t m_confidence;
+    char m_decisionReason[256];
+    uint32_t m_successCount;
+    uint32_t m_failureCount;
     
     /**
      * @brief Test a platform ID and cache the result
@@ -171,48 +195,6 @@ private:
      * @return Next platform ID to try
      */
     uint32_t getNextAA_AG_PlatformID(uint16_t deviceId, PlatformIDDatabase* db);
-    
-    /**
-     * @brief Check if we should delay boot due to no working platform ID
-     * @return true if delay is needed
-     */
-    bool shouldDelayBoot();
-    
-    /**
-     * @brief Perform boot delay with warning
-     */
-    void performBootDelay();
-    
-    /**
-     * @brief Get cached working platform ID
-     * @return Cached working platform ID or 0 if none
-     */
-    uint32_t getCachedWorkingPlatformID();
-    
-    /**
-     * @brief Check if platform ID has been tried and failed
-     * @param platformId The platform ID to check
-     * @return true if previously failed
-     */
-    bool isPlatformIDFailed(uint32_t platformId);
-    
-    /**
-     * @brief Find knowledge base entry for a platform ID
-     * @param platformId The platform ID to search for
-     * @return Pointer to knowledge entry or nullptr
-     */
-    const KnowledgeEntry* findKnowledgeEntry(uint32_t platformId);
-    const char** getRecommendedFixes(const char* issue);
-    uint32_t findBestCommunityPlatformId(uint16_t deviceId);
-    uint32_t getConfidence() const;
-    
-private:
-    uint32_t m_currentPlatformIndex;
-    uint32_t m_confidence;
-    char m_decisionReason[256];
-    uint32_t m_successCount;
-    uint32_t m_failureCount;
-    NVRAMManager* m_nvramManager;
     
     // Knowledge base
     static const KnowledgeEntry m_knowledgeBase[];
