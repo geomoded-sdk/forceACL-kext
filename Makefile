@@ -152,7 +152,7 @@ link_x86_64: build_x86_64
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	ld -r $$objs -o $(BUILDDIR)/ForceACL_x86_64
+	ld64 -r $$objs -o $(BUILDDIR)/ForceACL_x86_64
 
 # Link arm64 - combine all .o files into single executable
 link_arm64: build_arm64
@@ -162,7 +162,7 @@ link_arm64: build_arm64
 		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	ld -r $$objs -o $(BUILDDIR)/ForceACL_arm64
+	ld64 -r $$objs -o $(BUILDDIR)/ForceACL_arm64
 
 # Create universal binary from linked arch-specific objects
 create_universal: link_x86_64 link_arm64
