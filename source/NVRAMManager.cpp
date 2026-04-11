@@ -6,8 +6,8 @@
 #include <libkern/libkern.h>
 #include <IOKit/IOKitKeys.h>
 #include <IOKit/IORegistryEntry.h>
-#include <libkern/OSData.h>
-#include <libkern/OSString.h>
+#include <libkern/c++/OSData.h>
+#include <libkern/c++/OSString.h>
 
 #include "ForceACL/NVRAMManager.hpp"
 
