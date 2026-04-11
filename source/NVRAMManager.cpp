@@ -131,10 +131,10 @@ void NVRAMManager::incrementAIDecisionCount() {
 }
 
 void NVRAMManager::logNVRAMStatus() {
-    NVRAM_LOG("Cached platform ID: 0x%08X", m_cachedPlatformId);
-    NVRAM_LOG("Cached working: %u", m_cachedWorking);
-    NVRAM_LOG("Tried IDs: %u", m_triedIdsCount);
-    NVRAM_LOG("AI decisions: %u", m_aiDecisionCount);
+    IOLog("ForceACL: [NVRAM] Cached platform ID: 0x%08X\n", m_cachedPlatformId);
+    IOLog("ForceACL: [NVRAM] Cached working: %u\n", m_cachedWorking);
+    IOLog("ForceACL: [NVRAM] Tried IDs: %u\n", m_triedIdsCount);
+    IOLog("ForceACL: [NVRAM] AI decisions: %u\n", m_aiDecisionCount);
 }
 
 void NVRAMManager::clearAllCache() {
