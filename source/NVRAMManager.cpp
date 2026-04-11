@@ -5,8 +5,9 @@
 
 #include <libkern/libkern.h>
 #include <libkern/OSBase.h>
-#include <IOKit/IOKitKeys.h>
+#include <IOKit/IOService.h>
 #include <IOKit/IORegistryEntry.h>
+#include <IOKit/IOKitKeys.h>
 #include <libkern/c++/OSData.h>
 #include <libkern/c++/OSString.h>
 #include <libkern/OSKextLib.h>
