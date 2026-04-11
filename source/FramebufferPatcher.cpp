@@ -14,6 +14,7 @@
 #include <libkern/OSBase.h>
 #include <IOKit/IOService.h>
 #include <IOKit/IORegistryEntry.h>
+#include <IOKit/IOPlatformExpert.h>
 #include <IOKit/pci/IOPCIDevice.h>
 #include <IOKit/graphics/IOGraphicsTypes.h>
 #include <IOKit/graphics/IOFramebuffer.h>
