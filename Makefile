@@ -60,6 +60,12 @@ ifeq ($(SYSROOT),)
     $(error macOS SDK not found. Please install CommandLineTools: xcode-select --install)
 endif
 
+# Xcode toolchain path
+DEVELOPER_DIR ?= $(shell xcode-select -p)/../../
+ifeq ($(wildcard $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain),)
+    DEVELOPER_DIR = /Applications/Xcode_16.4.0.app/Contents/Developer
+endif
+
 # Single or multiple architectures
 ifeq ($(ARCHS),x86_64)
     DEPLOYMENT_TARGET = $(DEPLOYMENT_TARGET_X86_64)
@@ -152,7 +158,7 @@ link_x86_64: build_x86_64
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	xcrun ld -r $$objs -o $(BUILDDIR)/ForceACL_x86_64
+	$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld64 -r $$objs -o $(BUILDDIR)/ForceACL_x86_64
 
 # Link arm64 - combine all .o files into single executable
 link_arm64: build_arm64
@@ -162,7 +168,7 @@ link_arm64: build_arm64
 		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	xcrun ld -r $$objs -o $(BUILDDIR)/ForceACL_arm64
+	$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld64 -r $$objs -o $(BUILDDIR)/ForceACL_arm64
 
 # Create universal binary from linked arch-specific objects
 create_universal: link_x86_64 link_arm64
