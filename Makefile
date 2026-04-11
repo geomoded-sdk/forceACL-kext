@@ -151,23 +151,18 @@ build_arm64: | $(BUILDDIR) $(OBJDIR_ARM)
 	done
 
 link_x86_64: build_x86_64
-	@echo "Linking x86_64 (FINAL KEXT)..."
+	@echo "Linking x86_64 (REAL KEXT - ld64)..."
 	@objs=""; \
 	for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	$(CXX) \
-		-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
-		-isysroot $(SYSROOT) \
-		-fapple-kext \
-		-nodefaultlibs \
-		-nostartfiles \
-		-Wl,-kext \
-		-Wl,-bundle \
-		-Wl,-no_uuid \
-		-Wl,-undefined,dynamic_lookup \
-		-Wl,-platform_version,macos,$(DEPLOYMENT_TARGET_X86_64),$(DEPLOYMENT_TARGET_X86_64) \
+	xcrun ld \
+		-arch x86_64 \
+		-syslibroot $(SYSROOT) \
+		-kext \
+		-undefined dynamic_lookup \
+		-platform_version macos $(DEPLOYMENT_TARGET_X86_64) $(DEPLOYMENT_TARGET_X86_64) \
 		-o $(BUILDDIR)/ForceACL_x86_64 $$objs
 
 # Link arm64 - combine all .o files into single executable
