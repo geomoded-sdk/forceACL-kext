@@ -149,7 +149,7 @@ void AIDecisionEngine::recordFailure(uint32_t platformId) {
     m_failureCount++;
     FORCEACL_LOG("AI: Recorded failure for 0x%08X", platformId);
     if (m_nvramManager) {
-        m_nvramManager->markIDFailed(platformId);
+        m_nvramManager->setCachedWorking(false);
     }
 }
 
