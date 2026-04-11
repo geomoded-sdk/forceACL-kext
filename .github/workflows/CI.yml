@@ -45,19 +45,19 @@ jobs:
         run: |
           make clean
           make BUILD_TYPE=debug
-          ls -la build/Debug/ForceACL.kext/Contents/MacOS/ 2>/dev/null || echo "Debug build failed"
+          ls -la build/Debug/ForceACL.kext/Contents/MacOS/ 2>/dev/null | echo "Debug build failed"
 
       - name: Build Release
         run: |
           make clean
           make BUILD_TYPE=release
-          ls -la build/Release/ForceACL.kext/Contents/MacOS/ 2>/dev/null || echo "Release build failed"
+          ls -la build/Release/ForceACL.kext/Contents/MacOS/ 2>/dev/null | echo "Release build failed"
 
       - name: Build x86_64
         run: |
           make clean
           make ARCHS=x86_64
-          ls -la build/Release/ForceACL.kext/Contents/MacOS/ 2>/dev/null || echo "x86_64 build failed"
+          ls -la build/Release/ForceACL.kext/Contents/MacOS/ 2>/dev/null | echo "x86_64 build failed"
 
       
       - name: Create Artifacts
