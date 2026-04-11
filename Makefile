@@ -150,25 +150,42 @@ build_arm64: | $(BUILDDIR) $(OBJDIR_ARM)
 			-c $$src -o $$obj || exit 1; \
 	done
 
-# Link x86_64 - combine all .o files into single executable
 link_x86_64: build_x86_64
-	@echo "Linking x86_64..."
+	@echo "Linking x86_64 (FINAL KEXT)..."
 	@objs=""; \
 	for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -r $$objs -o $(BUILDDIR)/ForceACL_x86_64
+	$(CXX) \
+		-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
+		-isysroot $(SYSROOT) \
+		-fapple-kext \
+		-nostdlib++ \
+		-Wl,-kext \
+		-Wl,-bundle \
+		-Wl,-undefined,dynamic_lookup \
+		-Wl,-platform_version,macos,$(DEPLOYMENT_TARGET_X86_64),$(DEPLOYMENT_TARGET_X86_64) \
+		-o $(BUILDDIR)/ForceACL_x86_64 $$objs
 
 # Link arm64 - combine all .o files into single executable
 link_arm64: build_arm64
-	@echo "Linking arm64..."
+	@echo "Linking arm64 (FINAL KEXT)..."
 	@objs=""; \
 	for src in $(SOURCES); do \
 		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	$(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain/usr/bin/ld -r $$objs -o $(BUILDDIR)/ForceACL_arm64
+	$(CXX) \
+		-target arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64) \
+		-isysroot $(SYSROOT) \
+		-fapple-kext \
+		-nostdlib++ \
+		-Wl,-kext \
+		-Wl,-bundle \
+		-Wl,-undefined,dynamic_lookup \
+		-Wl,-platform_version,macos,$(DEPLOYMENT_TARGET_ARM64),$(DEPLOYMENT_TARGET_ARM64) \
+		-o $(BUILDDIR)/ForceACL_arm64 $$objs
 
 # Create universal binary from linked arch-specific objects
 create_universal: link_x86_64 link_arm64
