@@ -6,6 +6,7 @@
 #include <libkern/libkern.h>
 #include <mach/mach_time.h>
 #include <IOKit/IOService.h>
+#include <IOKit/IOLib.h>
 
 #include "ForceACL/ForceACL.hpp"
 

@@ -5,6 +5,8 @@
 
 #include <libkern/libkern.h>
 #include <libkern/OSBase.h>
+#include <IOKit/IOLib.h>
+
 #include "ForceACL/ErrorHandler.hpp"
 
 const ErrorEntry ErrorHandler::m_errorDatabase[] = {
