@@ -1,3 +1,7 @@
 [submodule "Lilu"]
 	path = Lilu
 	url = https://github.com/acidanthera/Lilu.git
+
+[submodule "WhateverGreen_temp"]
+    path = WhateverGreen_temp
+    url = https://github.com/acidanthera/WhateverGreen.git
