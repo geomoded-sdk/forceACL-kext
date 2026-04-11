@@ -4,6 +4,7 @@
  */
 
 #include <libkern/libkern.h>
+#include <libkern/OSBase.h>
 #include <IOKit/IOKitKeys.h>
 #include <IOKit/IORegistryEntry.h>
 #include <libkern/c++/OSData.h>
