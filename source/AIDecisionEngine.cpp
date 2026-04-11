@@ -289,49 +289,6 @@ const KnowledgeEntry* AIDecisionEngine::getKnowledgeEntry(uint32_t platformId) {
     }
     return nullptr;
 }
-
-const DecisionWeight* AIDecisionEngine::findDecisionWeight(GPUGeneration gen) {
-    for (size_t i = 0; i < sizeof(decisionWeights)/sizeof(decisionWeights[0]); i++) {
-        if (strstr_simple(decisionWeights[i].generation, detector.generationToString(gen)) != nullptr) {
-            return &decisionWeights[i];
-        }
-    }
-    return &decisionWeights[0];
-}
-
-bool AIDecisionEngine::getCachedWorkingPlatformID(uint32_t* platformId) {
-    if (!m_nvramManager || !platformId) {
-        return false;
-    }
-    if (m_nvramManager->isCachedWorking()) {
-        *platformId = m_nvramManager->getCachedPlatformID();
-        return true;
-    }
-    return false;
-}
-
-bool AIDecisionEngine::isPlatformIDFailed(uint32_t platformId) {
-    if (!m_nvramManager) {
-        return false;
-    }
-    return m_nvramManager->hasTriedID(platformId);
-}
-
-uint32_t AIDecisionEngine::analyzePlatformIDPattern(uint32_t platformId, uint16_t deviceId) {
-    uint32_t bonus = 0;
-    uint32_t low = platformId & 0xFFFF;
-    if ((low & 0xFF00) == 0x0000) {
-        bonus += 5;
-    }
-    if ((low & 0x000F) <= 0x09) {
-        bonus += 3;
-    }
-    return bonus;
-}
-
-uint32_t AIDecisionEngine::getBestKnowledgeConfidence(uint16_t deviceId) {
-    uint32_t best = 0;
-    for (size_t i = 0; i < knowledgeBaseSize; i++) {
         if (knowledgeBase[i].deviceId == deviceId && knowledgeBase[i].successRate > best) {
             best = knowledgeBase[i].successRate;
         }
