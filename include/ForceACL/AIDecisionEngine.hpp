@@ -9,11 +9,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
-// Forward declare GPUGeneration from ForceACL.hpp
-enum class GPUGeneration : uint8_t;
+#include "ForceACL/GPUDetector.hpp"
 
 class PlatformIDDatabase;
-class GPUDetector;
 class NVRAMManager;
 
 // Decision weights based on knowledge base
