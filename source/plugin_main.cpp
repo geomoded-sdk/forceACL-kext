@@ -4,6 +4,7 @@
  */
 
 #include <mach/mach_time.h>
+#include <mach/kmod.h>
 #include <IOKit/IOService.h>
 #include <IOKit/IOLib.h>
 
@@ -36,4 +37,14 @@ void PLUGIN_ENTRY() {
         plugin->init();
         plugin->start();
     }
+}
+
+// Kext entry point for standalone boot
+extern "C" void* kmod_start(kmod_info_t* ki, void* data) {
+    PLUGIN_ENTRY();
+    return nullptr;
+}
+
+extern "C" void* kmod_stop(kmod_info_t* ki, void* data) {
+    return nullptr;
 }
