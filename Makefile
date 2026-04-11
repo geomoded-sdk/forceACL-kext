@@ -62,6 +62,7 @@ CXXFLAGS = -Wall -Wextra -Wno-unused-parameter -std=c++17 $(OPT_FLAGS)
 CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-fno-common -fapple-kext \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
+	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
 	-I$(PWD)/include \
 	-I$(LILU_PATH)/Lilu/Headers
 
