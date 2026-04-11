@@ -1395,5 +1395,5 @@ void ForceACLPlugin::forceAcceleratorInit(IOService* accelerator) {
 
     // Force acceleration enable
     accelerator->setProperty("IOEnabled", true);
-    accelerator->setProperty("IOWorkLoop", 0);
+    accelerator->setProperty("IOWorkLoop", (uint64_t)0);
 }
