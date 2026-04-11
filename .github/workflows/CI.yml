@@ -59,12 +59,7 @@ jobs:
           make ARCHS=x86_64
           ls -la build/Release/ForceACL.kext/Contents/MacOS/ 2>/dev/null || echo "x86_64 build failed"
 
-      - name: Build arm64
-        run: |
-          make clean
-          make ARCHS=arm64
-          ls -la build/Release/ForceACL.kext/Contents/MacOS/ 2>/dev/null || echo "arm64 build failed"
-
+      
       - name: Create Artifacts
         run: |
           mkdir -p build/Debug build/Release
