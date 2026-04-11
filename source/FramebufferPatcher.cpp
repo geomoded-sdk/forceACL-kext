@@ -331,7 +331,13 @@ VRAMInfo FramebufferPatcher::detectVRAM() {
     info.isValid = false;
     info.needsPatch = false;
 
-    IORegistryEntry* framebuffer = IOService::getPlatform()->getProperty("IOFramebuffer");
+    IOService* platform = IOService::getPlatform();
+    if (!platform) {
+        return info;
+    }
+    
+    OSObject* fbObj = platform->getProperty("IOFramebuffer");
+    IORegistryEntry* framebuffer = OSDynamicCast(IORegistryEntry, fbObj);
     if (!framebuffer) {
         return info;
     }
