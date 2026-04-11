@@ -8,6 +8,11 @@
 
 #include <stdint.h>
 
+class IORegistryEntry;
+class OSObject;
+
+extern bool gForceACLVerbose;
+
 class NVRAMManager {
 public:
     NVRAMManager();
