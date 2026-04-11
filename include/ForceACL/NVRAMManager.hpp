@@ -8,9 +8,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <libkern/OSKextLib.h>
+#include <IOKit/IOService.h>
 
-class IORegistryEntry;
 class OSObject;
 
 extern bool gForceACLVerbose;
