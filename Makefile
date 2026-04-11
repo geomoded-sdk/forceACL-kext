@@ -60,7 +60,7 @@ KEXT_FLAGS = -mkernel -nostdlib -fno-builtin -fno-stack-protector
 CXXFLAGS = -Wall -Wextra -Wno-unused-parameter -std=c++17 $(OPT_FLAGS)
 
 CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
-	-fno-common -fapple-kext \
+	-fno-common \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
 	-I$(SDKROOT)/usr/include \
@@ -125,7 +125,6 @@ link_x86_64: build_x86_64
 		objs="$$objs $(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 	done; \
 	$(CXX) \
-		-fapple-kext \
 		-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
 		-isysroot $(SDKROOT) \
 		-nostdlib \
@@ -139,7 +138,6 @@ link_arm64: build_arm64
 		objs="$$objs $(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
 	done; \
 	$(CXX) \
-		-fapple-kext \
 		-target arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64) \
 		-isysroot $(SDKROOT) \
 		-nostdlib \
