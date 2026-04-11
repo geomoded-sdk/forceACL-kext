@@ -8,7 +8,8 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <IOKit/IOService.h>
+#include <libkern/OSKextLib.h>
+#include <IOKit/IORegistryEntry.h>
 
 class OSObject;
 
