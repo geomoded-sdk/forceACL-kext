@@ -9,6 +9,9 @@
 #include <stdint.h>
 #include <stddef.h>
 
+// Forward declare GPUGeneration from ForceACL.hpp
+enum class GPUGeneration : uint8_t;
+
 class PlatformIDDatabase;
 class GPUDetector;
 class NVRAMManager;
