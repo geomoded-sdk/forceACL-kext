@@ -11,6 +11,8 @@
 class PlatformIDDatabase;
 class IOPCIDevice;
 
+extern bool gForceACLVerbose;
+
 class GPUInjector {
 public:
     GPUInjector(PlatformIDDatabase* db);
