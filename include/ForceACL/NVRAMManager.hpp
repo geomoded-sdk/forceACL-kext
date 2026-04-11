@@ -8,6 +8,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <libkern/OSKextLib.h>
 
 class IORegistryEntry;
 class OSObject;
