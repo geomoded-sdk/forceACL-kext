@@ -7,6 +7,7 @@
 #define FORCEACL_NVRAMMANAGER_HPP
 
 #include <stdint.h>
+#include <stddef.h>
 
 class IORegistryEntry;
 class OSObject;
