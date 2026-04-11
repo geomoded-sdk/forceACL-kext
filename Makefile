@@ -131,6 +131,7 @@ link_x86_64: build_x86_64
 		-nostdlib \
 		-Wl,-kext \
 		-Wl,-bundle \
+		-Wl,-e,_kmod_start \
 		-Wl,-undefined,dynamic_lookup \
 		-o $(BUILDDIR)/ForceACL_x86_64 $$objs
 
@@ -147,6 +148,7 @@ link_arm64: build_arm64
 		-nostdlib \
 		-Wl,-kext \
 		-Wl,-bundle \
+		-Wl,-e,_kmod_start \
 		-Wl,-undefined,dynamic_lookup \
 		-o $(BUILDDIR)/ForceACL_arm64 $$objs
 
