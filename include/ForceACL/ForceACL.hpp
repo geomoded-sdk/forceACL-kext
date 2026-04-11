@@ -64,7 +64,8 @@ enum class PluginState {
 enum class FFACLMode {
     Unset = -1,
     Disabled = 0,
-    Enabled = 1
+    Enabled = 1,
+    BrutalModeCompatibility = 4  // ffacl=4 - Aggressive GPU forcing mode
 };
 
 // GPU Generation detection
@@ -193,12 +194,31 @@ private:
     ConnectorFixer* m_connectorFixer;
     FramebufferPatcher* m_framebufferPatcher;
     
+    // Brutal Mode state
+    bool m_brutalModeActive;
+    bool m_brutalModeFailed;
+    int m_brutalRetryCount;
+    
     void parseBootArguments();
     void detectOCLP();
     void initializeComponents();
     void hookIOServices();
     void processGPUs();
     void handleMode();
+    
+    // ========== BRUTAL MODE METHODS ==========
+    void handleGPUBrutal(IOPCIDevice* device);
+    void spoofToKnownWorkingGPU(IOPCIDevice* device);
+    uint32_t forceUniversalPlatform();
+    void injectAllProperties(IOPCIDevice* device, uint32_t platformId);
+    void setupBrutalModeHooks();
+    void applyAllPatches(IOPCIDevice* device);
+    void emulateEverything();
+    bool autoRecover(IOPCIDevice* device);
+    void checkBrutalModeBootFail();
+    void saveBrutalModeBootFail();
+    void forceFramebufferInit(IOService* framebuffer);
+    void forceAcceleratorInit(IOService* accelerator);
     
     IOPCIDevice* findIntelIGPU();
     uint32_t decidePlatformIDForIGPU(uint16_t deviceID);

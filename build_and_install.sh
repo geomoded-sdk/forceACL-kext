@@ -1,12 +1,13 @@
 #!/bin/bash
 
-# Script de instalação e compilação do ForceACL.kext
+# ForceACL.kext - Script de Build e Instalação
 # Compatível com macOS
 
-set -e  # Para o script em caso de erro
+set -e
 
-echo "=== ForceACL.kext - Script de Instalação e Compilação ==="
-echo "Este script instala dependências e compila o projeto."
+echo "========================================"
+echo " ForceACL.kext - Build System"
+echo "========================================"
 echo ""
 
 # Verificar se estamos no macOS
@@ -15,24 +16,24 @@ if [[ "$OSTYPE" != "darwin"* ]]; then
     exit 1
 fi
 
-# Verificar e instalar Xcode Command Line Tools
+# Verificar Xcode Command Line Tools
 echo "Verificando Xcode Command Line Tools..."
 if ! xcode-select -p &> /dev/null; then
     echo "Instalando Xcode Command Line Tools..."
     xcode-select --install
-    echo "Aguarde a instalação do Xcode Command Line Tools e pressione Enter para continuar..."
+    echo "Aguarde a instalação e pressione Enter..."
     read
-else
-    echo "Xcode Command Line Tools já instalado."
 fi
+echo "Xcode OK: $(xcode-select -p)"
+echo ""
 
-# Verificar se o diretório do projeto existe
+# Verificar Makefile
 if [[ ! -f "Makefile" ]]; then
-    echo "Erro: Execute este script no diretório raiz do projeto ForceACL.kext."
+    echo "Erro: Makefile não encontrado."
     exit 1
 fi
 
-# Instalar Lilu SDK se não existir
+# Verificar/Clonar Lilu
 LILU_DIR="Lilu"
 if [[ ! -d "$LILU_DIR" ]]; then
     echo "Clonando Lilu SDK..."
@@ -42,40 +43,86 @@ if [[ ! -d "$LILU_DIR" ]]; then
     cd ..
     echo "Lilu SDK clonado."
 else
-    echo "Lilu SDK já existe."
+    echo "Lilu SDK OK."
 fi
 
-# Configurar caminho do Lilu no Makefile (se necessário)
-echo "Configurando Makefile..."
-# O Makefile já tem LILU_PATH?= $(HOME)/Lilu, mas vamos garantir
-if ! grep -q "LILU_PATH.*Lilu" Makefile; then
-    echo "Adicionando LILU_PATH ao Makefile..."
-    sed -i '' '1a\
-LILU_PATH ?= ./Lilu
-' Makefile
-fi
+echo ""
+echo "========================================"
+echo " Compilando todas as versões..."
+echo "========================================"
+echo ""
 
-# Compilar o projeto
-echo "Compilando ForceACL.kext..."
+# ========== Debug Build ==========
+echo ">>> Compilando Debug (Universal)..."
 make clean
-make
-
-# Verificar se compilou com sucesso
-if [[ -d "build/ForceACL.kext" ]]; then
-    echo ""
-    echo "✅ Compilação concluída com sucesso!"
-    echo "Kext gerado em: build/ForceACL.kext"
-    echo ""
-    echo "Para instalar:"
-    echo "  sudo cp -r build/ForceACL.kext /Library/Extensions/"
-    echo "  sudo kextcache -i /"
-    echo ""
-    echo "Para usar no OpenCore:"
-    echo "  - Adicione ForceACL.kext em Kernel -> Add"
-    echo "  - Defina Kernel -> Quirks -> DisableIoMapper = Yes"
+make BUILD_TYPE=debug
+if [[ -d "build/Debug/ForceACL.kext" ]]; then
+    echo "✅ Debug OK"
 else
-    echo "❌ Erro na compilação. Verifique os logs acima."
+    echo "❌ Debug failed"
     exit 1
 fi
 
-echo "=== Script concluído ==="
+# ========== Release Build ==========
+echo ""
+echo ">>> Compilando Release (Universal)..."
+make clean
+make BUILD_TYPE=release
+if [[ -d "build/Release/ForceACL.kext" ]]; then
+    echo "✅ Release OK"
+else
+    echo "❌ Release failed"
+    exit 1
+fi
+
+# ========== x86_64 Only ==========
+echo ""
+echo ">>> Compilando x86_64 only..."
+make clean
+make ARCHS=x86_64
+if [[ -d "build/Release/ForceACL.kext" ]]; then
+    echo "✅ x86_64 OK"
+else
+    echo "❌ x86_64 failed"
+    exit 1
+fi
+
+# ========== arm64 Only ==========
+echo ""
+echo ">>> Compilando arm64 only..."
+make clean
+make ARCHS=arm64
+if [[ -d "build/Release/ForceACL.kext" ]]; then
+    echo "✅ arm64 OK"
+else
+    echo "❌ arm64 failed"
+    exit 1
+fi
+
+# ========== Summary ==========
+echo ""
+echo "========================================"
+echo " Build Summary"
+echo "========================================"
+echo ""
+echo "Arquivos gerados:"
+echo "  - build/Debug/ForceACL.kext      (Debug - Universal)"
+echo "  - build/Release/ForceACL.kext    (Release - Universal)"
+echo ""
+
+# Install option
+echo "Deseja instalar o kext? (y/n)"
+read -r answer
+if [[ "$answer" == "y" || "$answer" == "Y" ]]; then
+    echo ""
+    echo "Instalando Release version..."
+    sudo cp -R build/Release/ForceACL.kext /Library/Extensions/
+    sudo touch /Library/Extensions
+    echo "✅ Kext instalado!"
+    echo "Reinicie o sistema para aplicar."
+fi
+
+echo ""
+echo "========================================"
+echo " Script concluído!"
+echo "========================================"

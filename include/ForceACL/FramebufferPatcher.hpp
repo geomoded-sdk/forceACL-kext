@@ -14,6 +14,14 @@
 
 #include <stdint.h>
 
+#include "ForceACL/WGCompat.hpp"
+
+// Forward declare KernelPatcher for integration
+namespace KernelPatcher {
+    struct RouteRequest;
+    struct SolveRequest;
+}
+
 // Framebuffer patch types
 enum class FramebufferPatchType {
     None = 0,
@@ -109,7 +117,7 @@ public:
 
     // Main patching API
     bool patchFramebuffer(IOPCIDevice* gpuDevice, uint32_t platformID);
-    bool applyPatches(uint32_t platformID);
+    bool applyPatches(IOPCIDevice* device, uint32_t platformID);
     bool validateAcceleration();
 
     // Stage 2: Framebuffer patching
@@ -152,6 +160,12 @@ public:
     void dumpFramebufferInfo(IOService* framebuffer);
     void logPatchDetails();
     void setVerboseLogging(bool verbose) { m_verboseLogging = verbose; }
+    
+    // Set framebuffer service for connector patching
+    void setFramebufferService(IOService* service) { m_framebufferService = service; }
+    
+    // Get WGCompat platform info
+    const WGPlatformEntry* getWGCompatInfo(uint32_t platformID) const;
 
 private:
     // Patch database
@@ -164,6 +178,7 @@ private:
     bool m_verboseLogging;
     bool m_patchApplied;
     uint32_t m_currentPlatformID;
+    IOService* m_framebufferService;
 
     // Internal methods
     bool initializePatchProfile(uint32_t platformID);

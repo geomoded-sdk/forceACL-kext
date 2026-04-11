@@ -283,3 +283,8 @@ For more help, check logs in Console.app or create an issue on GitHub.
 ## License
 
 This project is under of apache 2.0 lisense.
+
+# credits
+acidantera
+whatevergreen
+lilu

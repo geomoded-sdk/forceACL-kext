@@ -1,6 +1,13 @@
 /**
  * ForceACL - Framebuffer Patching Engine
  * Replaces WhateverGreen framebuffer patching with native ForceACL logic.
+ * 
+ * Integration with WhateverGreen-style patches:
+ * - Platform ID injection
+ * - Framebuffer symbol hooking
+ * - Connector type patching
+ * - VRAM fixups
+ * - Memory property fixes
  */
 
 #include <libkern/libkern.h>
@@ -11,10 +18,11 @@
 #include <IOKit/graphics/IOGraphicsTypes.h>
 #include <IOKit/graphics/IOFramebuffer.h>
 #include <IOKit/IOKitKeys.h>
-#include <Lilu/kern_api.hpp>
+#include <mach/mach_time.h>
 
 #include "ForceACL/FramebufferPatcher.hpp"
 #include "ForceACL/GPUDetector.hpp"
+#include "ForceACL/WGCompat.hpp"
 
 const FramebufferConfig FramebufferPatcher::m_generationConfigs[] = {
     {"Sandy Bridge", 3, 2, 0x00800000, 0x02000000, 0x04000000, 1, false, false},
@@ -39,6 +47,7 @@ FramebufferPatcher::FramebufferPatcher()
     : m_verboseLogging(false)
     , m_patchApplied(false)
     , m_currentPlatformID(0)
+    , m_framebufferService(nullptr)
 {
     m_lastResult = {};
 }
@@ -72,6 +81,26 @@ bool FramebufferPatcher::executePatchPipeline(IOPCIDevice* device, uint32_t plat
     strlcpy(m_lastResult.statusMessage, "Framebuffer pipeline injected", sizeof(m_lastResult.statusMessage));
 
     return true;
+}
+
+bool FramebufferPatcher::applyPatches(IOPCIDevice* device, uint32_t platformID) {
+    if (!device) {
+        FB_PATCH_LOG_ERROR("applyPatches: null device");
+        return false;
+    }
+
+    FB_PATCH_LOG("Applying framebuffer patches for platform ID 0x%08X", platformID);
+
+    // Use the execute pipeline which handles property injection
+    bool result = executePatchPipeline(device, platformID);
+    
+    if (result) {
+        FB_PATCH_LOG("Framebuffer patches applied successfully");
+    } else {
+        FB_PATCH_LOG_ERROR("Framebuffer patches failed");
+    }
+    
+    return result;
 }
 
 bool FramebufferPatcher::patchFramebufferTables(IOService* framebuffer) {
@@ -141,6 +170,12 @@ bool FramebufferPatcher::fixEDP(uint8_t connectorIndex) {
 
 bool FramebufferPatcher::applyConnectorPatch(uint8_t index, const ConnectorPatch* patch) {
     if (!patch) {
+        FB_PATCH_LOG_ERROR("applyConnectorPatch: null patch");
+        return false;
+    }
+
+    if (!m_framebufferService) {
+        FB_PATCH_LOG_ERROR("applyConnectorPatch: no framebuffer service available");
         return false;
     }
 
@@ -152,19 +187,22 @@ bool FramebufferPatcher::applyConnectorPatch(uint8_t index, const ConnectorPatch
     uint32_t lanes = patch->laneCount;
 
     snprintf(key, sizeof(key), FB_PROP_CONN_ENABLE, index);
-    framebuffer->setProperty(key, &enabled, sizeof(enabled));
+    m_framebufferService->setProperty(key, &enabled, sizeof(enabled));
 
     snprintf(key, sizeof(key), FB_PROP_CONN_TYPE, index);
-    framebuffer->setProperty(key, &type, sizeof(type));
+    m_framebufferService->setProperty(key, &type, sizeof(type));
 
     snprintf(key, sizeof(key), FB_PROP_CONN_BUSID, index);
-    framebuffer->setProperty(key, &busid, sizeof(busid));
+    m_framebufferService->setProperty(key, &busid, sizeof(busid));
 
     snprintf(key, sizeof(key), FB_PROP_CONN_PIPE, index);
-    framebuffer->setProperty(key, &pipe, sizeof(pipe));
+    m_framebufferService->setProperty(key, &pipe, sizeof(pipe));
 
     snprintf(key, sizeof(key), FB_PROP_CONN_LANES, index);
-    framebuffer->setProperty(key, &lanes, sizeof(lanes));
+    m_framebufferService->setProperty(key, &lanes, sizeof(lanes));
+
+    FB_PATCH_LOG_VERBOSE("Applied connector patch %u: type=%u busid=%u pipe=%u lanes=%u",
+        index, type, busid, pipe, lanes);
 
     return true;
 }
@@ -220,6 +258,13 @@ bool FramebufferPatcher::injectFramebufferProperties(IOPCIDevice* device, uint32
 
     if (!selectBestPatchProfile(platformID)) {
         FB_PATCH_LOG_VERBOSE("Failed to select a patch profile, using basic connector defaults");
+    }
+
+    // Look up in WGCompat database for additional platform info
+    const WGPlatformEntry* wgEntry = wgFindPlatformById(platformID);
+    if (wgEntry) {
+        FB_PATCH_LOG_VERBOSE("Found WGCompat platform entry: generation=%s fbKext=%s",
+            wgEntry->generation, wgEntry->fbKextBundleId);
     }
 
     return true;
@@ -474,4 +519,8 @@ void FramebufferPatcher::logPatchDetails() {
         m_lastResult.accelerationEnabled,
         m_lastResult.metalEnabled,
         m_lastResult.statusMessage);
+}
+
+const WGPlatformEntry* FramebufferPatcher::getWGCompatInfo(uint32_t platformID) const {
+    return wgFindPlatformById(platformID);
 }
