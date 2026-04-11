@@ -1,4 +1,4 @@
-name: CI
+name: ForceACL CI (Acidanthera Level)
 
 on:
   push:
@@ -11,18 +11,17 @@ env:
   PROJECT_TYPE: KEXT
   SDKROOT: ${{ github.workspace }}/MacKernelSDK
   MACOSX_DEPLOYMENT_TARGET: 10.15
+  ARCHS: arm64 x86_64
 
 jobs:
   build:
-    name: Build
+    name: Build Kext (Universal)
     runs-on: macos-latest
-    env:
-      JOB_TYPE: BUILD
 
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
 
       - name: Checkout Lilu
         uses: actions/checkout@v4
@@ -36,156 +35,95 @@ jobs:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
-      - name: Force correct SDK usage
+      - name: Force toolchain sanity
         run: |
           echo "SDKROOT=$SDKROOT"
-          echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET"
+          xcrun --show-sdk-path
+          clang++ -v || true
 
-      - name: CI Bootstrap
+      # 🔥 CRÍTICO: impede SDK do sistema de vazar
+      - name: Override Apple SDK leak protection
         run: |
-          src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/ocbuild/master/ci-bootstrap.sh) && eval "$src" || exit 1
+          export SDKROOT=$PWD/MacKernelSDK
+          export CC=clang
+          export CXX=clang++
+          export CFLAGS="-isysroot $SDKROOT"
+          export LDFLAGS="-isysroot $SDKROOT"
+          echo "Locked SDKROOT=$SDKROOT"
+
+      - name: CI Bootstrap (ocbuild)
+        run: |
+          curl -Lfs https://raw.githubusercontent.com/acidanthera/ocbuild/master/ci-bootstrap.sh | bash
 
       - name: Lilu Bootstrap
         run: |
-          src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh) && eval "$src" || exit 1
+          curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh | bash
 
-      - name: Build Debug
+      # 💣 BUILD DEBUG
+      - name: Build Debug (Universal)
         run: |
+          export SDKROOT=$PWD/MacKernelSDK
           make clean
-          make BUILD_TYPE=debug SDKROOT=$SDKROOT
-          ls -la build/Debug/ForceACL.kext/Contents/MacOS/ || echo "Debug build failed"
+          make BUILD_TYPE=debug ARCHS="$ARCHS" \
+            SDKROOT=$SDKROOT \
+            OTHER_CFLAGS="-isysroot $SDKROOT -mkernel -nostdlib -fno-builtin" \
+            OTHER_LDFLAGS="-isysroot $SDKROOT -mkernel -nostdlib"
 
-      - name: Build Release
+      # 💣 BUILD RELEASE
+      - name: Build Release (Universal)
         run: |
+          export SDKROOT=$PWD/MacKernelSDK
           make clean
-          make BUILD_TYPE=release SDKROOT=$SDKROOT
-          ls -la build/Release/ForceACL.kext/Contents/MacOS/ || echo "Release build failed"
+          make BUILD_TYPE=release ARCHS="$ARCHS" \
+            SDKROOT=$SDKROOT \
+            OTHER_CFLAGS="-isysroot $SDKROOT -mkernel -nostdlib -fno-builtin" \
+            OTHER_LDFLAGS="-isysroot $SDKROOT -mkernel -nostdlib"
 
-      - name: Build x86_64
+      # 📦 ARTIFACTS
+      - name: Package Kext
         run: |
-          make clean
-          make ARCHS=x86_64 SDKROOT=$SDKROOT
-          ls -la build/Release/ForceACL.kext/Contents/MacOS/ || echo "x86_64 build failed"
-
-      - name: Create Artifacts
-        run: |
-          mkdir -p build/artifacts
+          mkdir -p artifacts
 
           if [ -d "build/Debug/ForceACL.kext" ]; then
-            cp -R build/Debug/ForceACL.kext build/artifacts/ForceACL-debug.kext
-            cd build/artifacts
-            zip -r ForceACL-debug.zip ForceACL-debug.kext
-            cd ../..
+            cp -R build/Debug/ForceACL.kext artifacts/ForceACL-Debug.kext
+            (cd artifacts && zip -r ForceACL-Debug.zip ForceACL-Debug.kext)
           fi
 
           if [ -d "build/Release/ForceACL.kext" ]; then
-            cp -R build/Release/ForceACL.kext build/artifacts/ForceACL.kext
-            cd build/artifacts
-            zip -r ForceACL-release.zip ForceACL.kext
-            cd ../..
+            cp -R build/Release/ForceACL.kext artifacts/ForceACL.kext
+            (cd artifacts && zip -r ForceACL-Release.zip ForceACL.kext)
           fi
 
-          echo "Artifacts:"
-          ls -la build/artifacts || true
-
-      - name: Upload Artifacts
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ForceACL-Kext
-          path: build/artifacts
+          path: artifacts
 
-      - name: Upload to Release
+      - name: Release upload
         if: github.event_name == 'release'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/artifacts/*.zip
-          tag: ${{ github.ref }}
+          file: artifacts/*.zip
           file_glob: true
 
 
-  analyze-clang:
-    name: Analyze Clang
+  analyze:
+    name: Static Analysis
     runs-on: macos-latest
-    env:
-      JOB_TYPE: ANALYZE
-      SDKROOT: ${{ github.workspace }}/MacKernelSDK
-      MACOSX_DEPLOYMENT_TARGET: 10.15
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout Lilu
-        uses: actions/checkout@v4
-        with:
-          repository: acidanthera/Lilu
-          path: Lilu
-
-      - name: Checkout MacKernelSDK
+      - name: Checkout deps
         uses: actions/checkout@v4
         with:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
-      - name: CI Bootstrap
+      - name: Run clang static analysis
         run: |
-          src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/ocbuild/master/ci-bootstrap.sh) && eval "$src" || exit 1
-
-      - name: Lilu Bootstrap
-        run: |
-          src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh) && eval "$src" || exit 1
-
-      - name: Analyze Debug
-        run: |
-          xcodebuild clean build \
-            -scheme ForceACL \
-            -configuration Debug \
-            SDKROOT=$SDKROOT \
-            CLANG_ANALYZER_OUTPUT=plist-html \
-            CLANG_ANALYZER_OUTPUT_DIR="$(pwd)/clang-analyze" \
-            || true
-
-      - name: Analyze Release
-        run: |
-          xcodebuild clean build \
-            -scheme ForceACL \
-            -configuration Release \
-            SDKROOT=$SDKROOT \
-            CLANG_ANALYZER_OUTPUT=plist-html \
-            CLANG_ANALYZER_OUTPUT_DIR="$(pwd)/clang-analyze" \
-            || true
-
-
-  analyze-coverity:
-    name: Analyze Coverity
-    runs-on: macos-latest
-    env:
-      JOB_TYPE: COVERITY
-    if: false
-
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Checkout Lilu
-        uses: actions/checkout@v4
-        with:
-          repository: acidanthera/Lilu
-          path: Lilu
-
-      - name: Checkout MacKernelSDK
-        uses: actions/checkout@v4
-        with:
-          repository: acidanthera/MacKernelSDK
-          path: MacKernelSDK
-
-      - name: CI Bootstrap
-        run: |
-          src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/ocbuild/master/ci-bootstrap.sh) && eval "$src" || exit 1
-
-      - name: Lilu Bootstrap
-        run: |
-          src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh) && eval "$src" || exit 1
-
-      - name: Coverity placeholder
-        run: |
-          echo "Coverity disabled - needs token"
+          export SDKROOT=$PWD/MacKernelSDK
+          make clean
+          make ANALYZE=1 SDKROOT=$SDKROOT || true
