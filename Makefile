@@ -128,8 +128,7 @@ link_x86_64: build_x86_64
 		-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
 		-isysroot $(SDKROOT) \
 		-nostdlib \
-		-Wl,-bundle \
-		-Wl,-seg1addr,0x1000 \
+		-Wl,-mkext \
 		-Wl,-e,_kmod_start \
 		-Wl,-undefined,dynamic_lookup \
 		-o $(BUILDDIR)/ForceACL_x86_64 $$objs
@@ -144,8 +143,7 @@ link_arm64: build_arm64
 		-target arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64) \
 		-isysroot $(SDKROOT) \
 		-nostdlib \
-		-Wl,-bundle \
-		-Wl,-seg1addr,0x1000 \
+		-Wl,-mkext \
 		-Wl,-e,_kmod_start \
 		-Wl,-undefined,dynamic_lookup \
 		-o $(BUILDDIR)/ForceACL_arm64 $$objs
