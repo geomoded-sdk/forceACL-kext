@@ -56,11 +56,4 @@ private:
     bool writeNVRAMKey(const char* key, const void* data, size_t length);
 };
 
-// Logging macros
-#define NVRAM_LOG(fmt, args...) \
-    do { IOLog("ForceACL: [NVRAM] " fmt "\n", ##args); } while(0)
-
-#define NVRAM_LOG_VERBOSE(fmt, args...) \
-    do { if (gForceACLVerbose) IOLog("ForceACL: [NVRAM-VERBOSE] " fmt "\n", ##args); } while(0)
-
 #endif // FORCEACL_NVRAMMANAGER_HPP
