@@ -9,6 +9,8 @@ on:
 
 env:
   PROJECT_TYPE: KEXT
+  SDKROOT: ${{ github.workspace }}/MacKernelSDK
+  MACOSX_DEPLOYMENT_TARGET: 10.15
 
 jobs:
   build:
@@ -16,6 +18,7 @@ jobs:
     runs-on: macos-latest
     env:
       JOB_TYPE: BUILD
+
     steps:
       - uses: actions/checkout@v4
         with:
@@ -33,6 +36,11 @@ jobs:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
+      - name: Force correct SDK usage
+        run: |
+          echo "SDKROOT=$SDKROOT"
+          echo "MACOSX_DEPLOYMENT_TARGET=$MACOSX_DEPLOYMENT_TARGET"
+
       - name: CI Bootstrap
         run: |
           src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/ocbuild/master/ci-bootstrap.sh) && eval "$src" || exit 1
@@ -44,64 +52,66 @@ jobs:
       - name: Build Debug
         run: |
           make clean
-          make BUILD_TYPE=debug
-          ls -la build/Debug/ForceACL.kext/Contents/MacOS/ 2>/dev/null | echo "Debug build failed"
+          make BUILD_TYPE=debug SDKROOT=$SDKROOT
+          ls -la build/Debug/ForceACL.kext/Contents/MacOS/ || echo "Debug build failed"
 
       - name: Build Release
         run: |
           make clean
-          make BUILD_TYPE=release
-          ls -la build/Release/ForceACL.kext/Contents/MacOS/ 2>/dev/null | echo "Release build failed"
+          make BUILD_TYPE=release SDKROOT=$SDKROOT
+          ls -la build/Release/ForceACL.kext/Contents/MacOS/ || echo "Release build failed"
 
       - name: Build x86_64
         run: |
           make clean
-          make ARCHS=x86_64
-          ls -la build/Release/ForceACL.kext/Contents/MacOS/ 2>/dev/null | echo "x86_64 build failed"
+          make ARCHS=x86_64 SDKROOT=$SDKROOT
+          ls -la build/Release/ForceACL.kext/Contents/MacOS/ || echo "x86_64 build failed"
 
-      
       - name: Create Artifacts
         run: |
-          mkdir -p build/Debug build/Release
-          
-          # Debug
-          if [ -d "build/Release/ForceACL.kext" ]; then
-            cp -R build/Release/ForceACL.kext build/Debug/ForceACL-debug.kext
-            cd build/Debug
+          mkdir -p build/artifacts
+
+          if [ -d "build/Debug/ForceACL.kext" ]; then
+            cp -R build/Debug/ForceACL.kext build/artifacts/ForceACL-debug.kext
+            cd build/artifacts
             zip -r ForceACL-debug.zip ForceACL-debug.kext
             cd ../..
           fi
-          
-          # Release
+
           if [ -d "build/Release/ForceACL.kext" ]; then
-            cd build/Release
+            cp -R build/Release/ForceACL.kext build/artifacts/ForceACL.kext
+            cd build/artifacts
             zip -r ForceACL-release.zip ForceACL.kext
             cd ../..
           fi
-          
-          echo "Artifacts created:"
-          ls -la build/*/*.zip 2>/dev/null || true
 
-      - name: Upload to Artifacts
+          echo "Artifacts:"
+          ls -la build/artifacts || true
+
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: ForceACL-Artifacts
-          path: build/*
+          name: ForceACL-Kext
+          path: build/artifacts
 
       - name: Upload to Release
         if: github.event_name == 'release'
         uses: svenstaro/upload-release-action@v2
         with:
           repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: build/*/*.zip
+          file: build/artifacts/*.zip
           tag: ${{ github.ref }}
           file_glob: true
+
 
   analyze-clang:
     name: Analyze Clang
     runs-on: macos-latest
     env:
       JOB_TYPE: ANALYZE
+      SDKROOT: ${{ github.workspace }}/MacKernelSDK
+      MACOSX_DEPLOYMENT_TARGET: 10.15
+
     steps:
       - uses: actions/checkout@v4
 
@@ -125,45 +135,34 @@ jobs:
         run: |
           src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh) && eval "$src" || exit 1
 
-      - name: Create minimal project for analysis
-        run: |
-          # Create a minimal project.pbxproj for clang analysis
-          cat > project.yml << 'EOF'
-          name: ForceACL
-          targets:
-            ForceACL:
-              type: kernel-extension
-              sources:
-                - source
-                - include
-              settings:
-                PRODUCT_BUNDLE_IDENTIFIER: com.forceacl.kext
-                INFOPLIST_FILE: Info.plist
-                SKIP_INSTALL: YES
-                MACOSX_DEPLOYMENT_TARGET: 10.15
-                CLANG_ENABLE_MODULES: YES
-                OTHER_LDFLAGS: -kernel
-                KERNEL_EXTENSION: YES
-          EOF
-
       - name: Analyze Debug
         run: |
-          xcodebuild -project build.xcodeproj -scheme ForceACL -configuration Debug \
+          xcodebuild clean build \
+            -scheme ForceACL \
+            -configuration Debug \
+            SDKROOT=$SDKROOT \
             CLANG_ANALYZER_OUTPUT=plist-html \
-            CLANG_ANALYZER_OUTPUT_DIR="$(pwd)/clang-analyze" 2>&1 | tail -20 || true
+            CLANG_ANALYZER_OUTPUT_DIR="$(pwd)/clang-analyze" \
+            || true
 
-      - name: Analyze Release  
+      - name: Analyze Release
         run: |
-          xcodebuild -project build.xcodeproj -scheme ForceACL -configuration Release \
+          xcodebuild clean build \
+            -scheme ForceACL \
+            -configuration Release \
+            SDKROOT=$SDKROOT \
             CLANG_ANALYZER_OUTPUT=plist-html \
-            CLANG_ANALYZER_OUTPUT_DIR="$(pwd)/clang-analyze" 2>&1 | tail -20 || true
+            CLANG_ANALYZER_OUTPUT_DIR="$(pwd)/clang-analyze" \
+            || true
+
 
   analyze-coverity:
     name: Analyze Coverity
     runs-on: macos-latest
     env:
       JOB_TYPE: COVERITY
-    if: false # Disabled for now - requires Coverity token
+    if: false
+
     steps:
       - uses: actions/checkout@v4
 
@@ -187,10 +186,6 @@ jobs:
         run: |
           src=$(/usr/bin/curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh) && eval "$src" || exit 1
 
-      - name: Run Coverity
+      - name: Coverity placeholder
         run: |
-          echo "Coverity analysis disabled - requires token"
-        env:
-          COVERITY_SCAN_TOKEN: ${{ secrets.COVERITY_SCAN_TOKEN }}
-          COVERITY_SCAN_EMAIL: ${{ secrets.COVERITY_SCAN_EMAIL }}
-          COVERITY_BUILD_COMMAND: make BUILD_TYPE=release
+          echo "Coverity disabled - needs token"
