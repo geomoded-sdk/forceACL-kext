@@ -89,24 +89,6 @@ jobs:
               -Xlinker -undefined \
               -Xlinker dynamic_lookup"
 
-      # =========================
-      # BUILD RELEASE
-      # =========================
-      - name: Build Release
-        run: |
-          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-          make clean
-
-          make BUILD_TYPE=release ARCHS="$ARCHS" \
-            SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="\
-              -isysroot $SDKROOT \
-              -I$PWD/MacKernelSDK \
-              -mkernel -fno-builtin -fno-exceptions" \
-            OTHER_LDFLAGS="\
-              -isysroot $SDKROOT \
-              -mkext -undefined dynamic_lookup"
-
       # 📦 PACKAGE
       - name: Package
         run: |
