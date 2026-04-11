@@ -161,10 +161,11 @@ link_x86_64: build_x86_64
 		-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
 		-isysroot $(SYSROOT) \
 		-fapple-kext \
-		-nostdlib \
+		-nodefaultlibs \
 		-nostartfiles \
 		-Wl,-kext \
 		-Wl,-bundle \
+		-Wl,-no_uuid \
 		-Wl,-undefined,dynamic_lookup \
 		-Wl,-platform_version,macos,$(DEPLOYMENT_TARGET_X86_64),$(DEPLOYMENT_TARGET_X86_64) \
 		-o $(BUILDDIR)/ForceACL_x86_64 $$objs
