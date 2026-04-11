@@ -59,9 +59,10 @@ jobs:
             OTHER_CFLAGS="\
               -isysroot $SDKROOT \
               -I$PWD/MacKernelSDK \
-              -mkernel -fno-builtin -fno-exceptions" \
+              -mkernel -fno-builtin -fno-exceptions -fapple-kext" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
+              -fapple-kext \
               -Wl,-bundle \
               -Wl,-undefined,dynamic_lookup"
 
@@ -77,9 +78,10 @@ jobs:
             OTHER_CFLAGS="\
               -isysroot $SDKROOT \
               -I$PWD/MacKernelSDK \
-              -mkernel -fno-builtin -fno-exceptions" \
+              -mkernel -fno-builtin -fno-exceptions -fapple-kext" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
+              -fapple-kext \
               -Wl,-bundle \
               -Wl,-undefined,dynamic_lookup"
 
