@@ -45,17 +45,17 @@ public:
      * Inject HDMI-specific properties
      * Properties: enable-hdmi20, disable-hdmi-patch, etc.
      */
-    bool injectHDMIProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectHDMIProperties(IORegistryEntry* gpuDevice);
     
     /**
      * Inject Metal acceleration properties
      */
-    bool injectMetalProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectMetalProperties(IORegistryEntry* gpuDevice);
     
     /**
      * Inject display pipe properties
      */
-    bool injectDisplayPipeProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectDisplayPipeProperties(IORegistryEntry* gpuDevice);
     
     /**
      * Inject VRAM correction properties
@@ -65,34 +65,34 @@ public:
     /**
      * Inject DVMT pre-allocated memory properties
      */
-    bool injectDVMTProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectDVMTProperties(IORegistryEntry* gpuDevice);
     
     /**
      * Inject audio/HDMI audio properties
      */
-    bool injectHDMIAudioProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectHDMIAudioProperties(IORegistryEntry* gpuDevice);
     
     /**
      * Inject backlight properties for laptops
      */
-    bool injectBacklightProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectBacklightProperties(IORegistryEntry* gpuDevice);
     
     // === Advanced Features ===
     
     /**
      * Inject LSPCON support properties for some systems
      */
-    bool injectLSPCONProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectLSPCONProperties(IORegistryEntry* gpuDevice);
     
     /**
      * Inject FBC (Framebuffer Compression) properties
      */
-    bool injectFBCProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectFBCProperties(IORegistryEntry* gpuDevice);
     
     /**
      * Inject power management properties
      */
-    bool injectPowerManagementProperties(IORegistryEntry* gpuDevice, uint32_t platformId);
+    bool injectPowerManagementProperties(IORegistryEntry* gpuDevice);
     
     // === Helper Methods ===
     
