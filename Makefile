@@ -152,7 +152,7 @@ link_x86_64: build_x86_64
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	ld -r -arch x86_64 $$objs -o $(BUILDDIR)/ForceACL_x86_64.o
+	lipo -create $$objs -output $(BUILDDIR)/ForceACL_x86_64
 
 # Link arm64
 link_arm64: build_arm64
@@ -162,23 +162,23 @@ link_arm64: build_arm64
 		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
 		objs="$$objs $$obj"; \
 	done; \
-	ld -r -arch arm64 $$objs -o $(BUILDDIR)/ForceACL_arm64.o
+	lipo -create $$objs -output $(BUILDDIR)/ForceACL_arm64
 
 # Create universal binary
 create_universal: link_x86_64 link_arm64
 	@echo "Creating universal binary..."
-	@lipo -create $(BUILDDIR)/ForceACL_x86_64.o $(BUILDDIR)/ForceACL_arm64.o \
+	@lipo -create $(BUILDDIR)/ForceACL_x86_64 $(BUILDDIR)/ForceACL_arm64 \
 		-output $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
 
 # Create x86_64 only binary
 create_x86_64: link_x86_64
 	@echo "Creating x86_64 binary..."
-	@cp $(BUILDDIR)/ForceACL_x86_64.o $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
+	@cp $(BUILDDIR)/ForceACL_x86_64 $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
 
 # Create arm64 only binary
 create_arm64: link_arm64
 	@echo "Creating arm64 binary..."
-	@cp $(BUILDDIR)/ForceACL_arm64.o $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
+	@cp $(BUILDDIR)/ForceACL_arm64 $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
 
 # Main build target
 $(KEXTDIR): info
