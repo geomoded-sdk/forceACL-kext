@@ -800,15 +800,15 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
     // ==================== HDMI/LSPCON PROPERTIES ====================
     if (m_gpuPropertiesManager) {
         FORCEACL_LOG(">>> Injecting HDMI Configuration (including LSPCON for DP bridges)");
-        m_gpuPropertiesManager->injectHDMIProperties(device, platformId);
-        m_gpuPropertiesManager->injectLSPCONProperties(device, platformId);
+        m_gpuPropertiesManager->injectHDMIProperties(device);
+        m_gpuPropertiesManager->injectLSPCONProperties(device);
         FORCEACL_LOG("    HDMI modes, LSPCON adaptation enabled");
     }
 
     // ==================== ACCELERATION PROPERTIES ====================
     if (m_gpuPropertiesManager) {
         FORCEACL_LOG(">>> Injecting GPU Acceleration properties (Metal/QE/CI/GVA)");
-        m_gpuPropertiesManager->injectMetalProperties(device, platformId);
+        m_gpuPropertiesManager->injectMetalProperties(device);
         FORCEACL_LOG("    Metal rendering paths, QuartzExtreme (QE), CoreImage (CI) enabled");
     }
 
@@ -816,7 +816,7 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
     if (m_gpuPropertiesManager) {
         FORCEACL_LOG(">>> Injecting Memory allocation properties (VRAM & DVMT)");
         m_gpuPropertiesManager->injectVRAMProperties(device, platformId);
-        m_gpuPropertiesManager->injectDVMTProperties(device, platformId);
+        m_gpuPropertiesManager->injectDVMTProperties(device);
         FORCEACL_LOG("    Fake VRAM and DVMT pre-allocation configured");
     } else {
         // Fallback VRAM injection
@@ -840,15 +840,15 @@ void ForceACLPlugin::injectPlatformProperties(IOPCIDevice* device, uint32_t plat
     // ==================== AUDIO/BACKLIGHT PROPERTIES ====================
     if (m_gpuPropertiesManager) {
         FORCEACL_LOG(">>> Injecting Display and Audio support properties");
-        m_gpuPropertiesManager->injectBacklightProperties(device, platformId);
+        m_gpuPropertiesManager->injectBacklightProperties(device);
         FORCEACL_LOG("    Backlight control, display configuration enabled");
     }
 
     // ==================== POWER MANAGEMENT PROPERTIES ====================
     if (m_gpuPropertiesManager) {
         FORCEACL_LOG(">>> Injecting Power Management and GPU Control properties");
-        m_gpuPropertiesManager->injectPowerManagementProperties(device, platformId);
-        m_gpuPropertiesManager->injectFBCProperties(device, platformId);
+        m_gpuPropertiesManager->injectPowerManagementProperties(device);
+        m_gpuPropertiesManager->injectFBCProperties(device);
         FORCEACL_LOG("    Power management, frame buffer compression configured");
     }
 
