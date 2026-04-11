@@ -63,6 +63,7 @@ CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-fno-common -fapple-kext \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
+	-I$(SDKROOT)/usr/include \
 	-I$(PWD)/include \
 	-I$(LILU_PATH)/Lilu/Headers
 
