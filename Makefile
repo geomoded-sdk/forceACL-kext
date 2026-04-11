@@ -60,19 +60,31 @@ ifeq ($(SYSROOT),)
     $(error macOS SDK not found. Please install CommandLineTools: xcode-select --install)
 endif
 
-ARCHS = x86_64 arm64
+# Single or multiple architectures
+ifeq ($(ARCHS),x86_64)
+    DEPLOYMENT_TARGET = $(DEPLOYMENT_TARGET_X86_64)
+else ifeq ($(ARCHS),arm64)
+    DEPLOYMENT_TARGET = $(DEPLOYMENT_TARGET_ARM64)
+else
+    DEPLOYMENT_TARGET = $(DEPLOYMENT_TARGET_X86_64)
+    ARCHS ?= x86_64 arm64
+endif
+
 DEPLOYMENT_TARGET_X86_64 = 10.15
 DEPLOYMENT_TARGET_ARM64 = 11.0
 
 # Directories
 BUILDDIR = build/$(BUILD_NAME)
-OBJDIR = $(BUILDDIR)/Objects
+OBJDIR_X86 = $(BUILDDIR)/Objects_x86
+OBJDIR_ARM = $(BUILDDIR)/Objects_arm
 KEXTDIR = $(BUILDDIR)/$(KEXT_NAME).kext
 
 # Compilation flags
-CFLAGS = -$(BUILD_TYPE) -Wall -Wextra -Wno-unused-parameter $(OPT_FLAGS)
-CXXFLAGS = -$(BUILD_TYPE) -Wall -Wextra -Wno-unused-parameter -std=c++17 $(OPT_FLAGS)
+CXX = clang++
+CFLAGS = -Wall -Wextra -Wno-unused-parameter $(OPT_FLAGS)
+CXXFLAGS = -Wall -Wextra -Wno-unused-parameter -std=c++17 $(OPT_FLAGS)
 CPPFLAGS = -DKERNEL -DKERNEL_DEBUG -fno-builtin -fno-common -fapple-kext \
+           -DKERNEL_EXTENSION=1 \
            -I$(SYSROOT)/System/Library/Frameworks/Kernel.framework/Headers \
            -I$(SYSROOT)/usr/include/c++/v1 \
            -I$(PWD)/include \
@@ -93,72 +105,93 @@ info:
 	@echo " Architectures: $(ARCHS)"
 	@echo "========================================"
 
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
+# Create directories
+$(BUILDDIR):
+	mkdir -p $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS
+	mkdir -p $(BUILDDIR)/$(KEXT_NAME).kext/Contents/Resources
 
-$(KEXTDIR): $(OBJDIR)
-	mkdir -p $(KEXTDIR)/Contents/MacOS
-	mkdir -p $(KEXTDIR)/Contents/Resources
+$(OBJDIR_X86):
+	mkdir -p $(OBJDIR_X86)
 
-# Compile all source files
-$(OBJDIR)/%.o: source/%.cpp $(HEADERS) | $(KEXTDIR)
-	@echo "  Compiling: $<"
-	@$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
-		-target $(shell echo $(ARCHS) | awk '{print $$1"-apple-macosx"}')$(DEPLOYMENT_TARGET_X86_64) \
-		-isysroot $(SYSROOT) \
-		-c $< -o $@
+$(OBJDIR_ARM):
+	mkdir -p $(OBJDIR_ARM)
 
-# Compile with universal target
-compile_all:
-	@for arch in $(ARCHS); do \
-		echo ""; \
-		echo ">>> Building for $$arch..."; \
-		if [ "$$arch" = "x86_64" ]; then \
-			target="x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64)"; \
-		else \
-			target="arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64)"; \
-		fi; \
-		for src in $(SOURCES); do \
-			obj="$(OBJDIR)/$$(basename $$src .cpp)_$${arch}.o"; \
-			echo "  Compiling: $$src"; \
-			$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
-				-target $$target \
-				-isysroot $(SYSROOT) \
-				-c $$src -o $$obj || exit 1; \
-		done; \
+# Build for x86_64
+build_x86_64: | $(BUILDDIR) $(OBJDIR_X86)
+	@echo "Building x86_64..."
+	@for src in $(SOURCES); do \
+		echo "  Compiling: $$src"; \
+		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
+		$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
+			-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
+			-isysroot $(SYSROOT) \
+			-I$(KEXT_INC) \
+			-I$(KEXT_INC)/libkern/c++ \
+			-c $$src -o $$obj || exit 1; \
 	done
 
-# Link each architecture
-link_all: compile_all
-	@echo ""
-	@echo "Linking..."
-	@mkdir -p $(KEXTDIR)/Contents/MacOS
-	@for arch in $(ARCHS); do \
-		echo "  Linking $$arch..."; \
-		objs=""; \
-		for src in $(SOURCES); do \
-			obj="$(OBJDIR)/$$(basename $$src .cpp)_$${arch}.o"; \
-			if [ -f "$$obj" ]; then \
-				objs="$$objs $$obj"; \
-			fi; \
-		done; \
-		if [ -n "$$objs" ]; then \
-			ld -r -arch $$arch $$objs -o $(BUILDDIR)/ForceACL_$${arch}.o; \
-		fi; \
+# Build for arm64
+build_arm64: | $(BUILDDIR) $(OBJDIR_ARM)
+	@echo "Building arm64..."
+	@for src in $(SOURCES); do \
+		echo "  Compiling: $$src"; \
+		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
+		$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
+			-target arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64) \
+			-isysroot $(SYSROOT) \
+			-I$(KEXT_INC) \
+			-I$(KEXT_INC)/libkern/c++ \
+			-c $$src -o $$obj || exit 1; \
 	done
-	@echo ""
+
+# Link x86_64
+link_x86_64: build_x86_64
+	@echo "Linking x86_64..."
+	@objs=""; \
+	for src in $(SOURCES); do \
+		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
+		objs="$$objs $$obj"; \
+	done; \
+	ld -r -arch x86_64 $$objs -o $(BUILDDIR)/ForceACL_x86_64.o
+
+# Link arm64
+link_arm64: build_arm64
+	@echo "Linking arm64..."
+	@objs=""; \
+	for src in $(SOURCES); do \
+		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
+		objs="$$objs $$obj"; \
+	done; \
+	ld -r -arch arm64 $$objs -o $(BUILDDIR)/ForceACL_arm64.o
+
+# Create universal binary
+create_universal: link_x86_64 link_arm64
 	@echo "Creating universal binary..."
-	@if [ -f $(BUILDDIR)/ForceACL_x86_64.o ] && [ -f $(BUILDDIR)/ForceACL_arm64.o ]; then \
-		lipo -create $(BUILDDIR)/ForceACL_x86_64.o $(BUILDDIR)/ForceACL_arm64.o \
-			-output $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME); \
-	elif [ -f $(BUILDDIR)/ForceACL_x86_64.o ]; then \
-		cp $(BUILDDIR)/ForceACL_x86_64.o $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME); \
-	elif [ -f $(BUILDDIR)/ForceACL_arm64.o ]; then \
-		cp $(BUILDDIR)/ForceACL_arm64.o $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME); \
-	fi
-	@cp Info.plist $(KEXTDIR)/Contents/Info.plist
+	@lipo -create $(BUILDDIR)/ForceACL_x86_64.o $(BUILDDIR)/ForceACL_arm64.o \
+		-output $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
 
-$(KEXTDIR): link_all
+# Create x86_64 only binary
+create_x86_64: link_x86_64
+	@echo "Creating x86_64 binary..."
+	@cp $(BUILDDIR)/ForceACL_x86_64.o $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
+
+# Create arm64 only binary
+create_arm64: link_arm64
+	@echo "Creating arm64 binary..."
+	@cp $(BUILDDIR)/ForceACL_arm64.o $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
+
+# Main build target
+$(KEXTDIR): info
+ifneq ($(findstring x86_64,$(ARCHS)),)
+ifneq ($(findstring arm64,$(ARCHS)),)
+	@$(MAKE) create_universal
+else
+	@$(MAKE) create_x86_64
+endif
+else
+	@$(MAKE) create_arm64
+endif
+	@cp Info.plist $(KEXTDIR)/Contents/Info.plist
 	@echo ""
 	@echo "========================================"
 	@echo " Build complete!"
@@ -193,4 +226,4 @@ uninstall:
 	sudo rm -rf /Library/Extensions/$(KEXT_NAME).kext
 	sudo touch /Library/Extensions
 
-.PHONY: all info compile_all link_all debug release x86_64 arm64 clean distclean install uninstall
+.PHONY: all info build_x86_64 build_arm64 link_x86_64 link_arm64 create_universal create_x86_64 create_arm64 debug release x86_64 arm64 clean distclean install uninstall
