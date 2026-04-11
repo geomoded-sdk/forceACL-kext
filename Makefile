@@ -88,7 +88,23 @@ $(BUILDDIR):
 	mkdir -p $(KEXTDIR)/Contents/MacOS
 	mkdir -p $(KEXTDIR)/Contents/Resources
 
+.PHONY: create_universal
+
+create_universal: link_x86_64 link_arm64
+	@echo "Creating universal binary..."
+	@echo "x86: $(BUILDDIR)/ForceACL_x86_64"
+	@echo "arm: $(BUILDDIR)/ForceACL_arm64"
+	@echo "out: $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)"
+	@lipo -create \
+		$(BUILDDIR)/ForceACL_x86_64 \
+		$(BUILDDIR)/ForceACL_arm64 \
+		-output $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
+
 $(OBJDIR_X86):
+	mkdir -p $(OBJDIR_X86)
+
+$(OBJDIR_ARM):
+	mkdir -p $(OBJDIR_ARM)
 	mkdir -p $(OBJDIR_X86)
 
 $(OBJDIR_ARM):
