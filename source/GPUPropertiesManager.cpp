@@ -7,6 +7,7 @@
 #include <libkern/OSBase.h>
 #include <IOKit/IOService.h>
 #include <IOKit/IORegistryEntry.h>
+#include <IOKit/IOLib.h>
 
 #include "ForceACL/GPUPropertiesManager.hpp"
 
