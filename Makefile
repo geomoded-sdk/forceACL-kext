@@ -1,19 +1,17 @@
 #
-# ForceACL.kext Makefile
-# Lilu plugin for Intel GPU injection with AI decision engine
-# Build: make (debug) or make BUILD_TYPE=release
+# ForceACL.kext Makefile (FIXED - Kernel Safe)
 #
 
 PRODUCT_NAME = ForceACL
 KEXT_NAME = ForceACL
-LILU_PATH ?= $(HOME)/Lilu
+LILU_PATH ?= $(PWD)/Lilu
 
-# Build type: debug or release
+# Build type
 BUILD_TYPE ?= debug
+
 ifeq ($(BUILD_TYPE),release)
     OPT_FLAGS = -O2
-    STRIP_SYMBOLS = -Wl,-x
-    VERSION_SUFFIX = 
+    VERSION_SUFFIX =
     BUILD_NAME = Release
 else
     OPT_FLAGS = -g -O0
@@ -21,7 +19,7 @@ else
     BUILD_NAME = Debug
 endif
 
-# Source files
+# Sources
 SOURCES = \
 	source/plugin_main.cpp \
 	source/ForceACL.cpp \
@@ -37,84 +35,52 @@ SOURCES = \
 	source/ConnectorFixer.cpp \
 	source/GPUPropertiesManager.cpp
 
-# Headers  
-HEADERS = \
-	include/ForceACL/ForceACL.hpp \
-	include/ForceACL/PlatformDatabase.hpp \
-	include/ForceACL/GPUDetector.hpp \
-	include/ForceACL/GPUInjector.hpp \
-	include/ForceACL/NVRAMManager.hpp \
-	include/ForceACL/AIDecisionEngine.hpp \
-	include/ForceACL/ErrorHandler.hpp \
-	include/ForceACL/HookManager.hpp \
-	include/ForceACL/FramebufferPatcher.hpp \
-	include/ForceACL/ConnectorFixer.hpp \
-	include/ForceACL/GPUPropertiesManager.hpp \
-	include/ForceACL/CommunityKnowledgeBase.hpp \
-	include/ForceACL/WGCompat.hpp
+# SDK (CORRIGIDO)
+SDKROOT := $(shell xcrun --sdk macosx --show-sdk-path)
 
-# macOS SDK detection
-SDK_ROOT = /Library/Developer/CommandLineTools/SDKs
-SYSROOT ?= $(shell ls -d $(SDK_ROOT)/MacOSX* 2>/dev/null | tail -1)
-ifeq ($(SYSROOT),)
-    $(error macOS SDK not found. Please install CommandLineTools: xcode-select --install)
-endif
-
-# Xcode toolchain path
-DEVELOPER_DIR ?= $(shell xcode-select -p)/../../
-ifeq ($(wildcard $(DEVELOPER_DIR)/Toolchains/XcodeDefault.xctoolchain),)
-    DEVELOPER_DIR = /Applications/Xcode.app/Contents/Developer
-endif
-
-# Single or multiple architectures
-ifeq ($(ARCHS),x86_64)
-    DEPLOYMENT_TARGET = $(DEPLOYMENT_TARGET_X86_64)
-else ifeq ($(ARCHS),arm64)
-    DEPLOYMENT_TARGET = $(DEPLOYMENT_TARGET_ARM64)
-else
-    DEPLOYMENT_TARGET = $(DEPLOYMENT_TARGET_X86_64)
-    ARCHS ?= x86_64 arm64
-endif
-
+# Deployment targets
 DEPLOYMENT_TARGET_X86_64 = 10.15
 DEPLOYMENT_TARGET_ARM64 = 11.0
 
-# Directories
+# Archs
+ARCHS ?= arm64 x86_64
+
+# Output
 BUILDDIR = build/$(BUILD_NAME)
-OBJDIR_X86 = $(BUILDDIR)/Objects_x86
-OBJDIR_ARM = $(BUILDDIR)/Objects_arm
+OBJDIR_X86 = $(BUILDDIR)/obj_x86
+OBJDIR_ARM = $(BUILDDIR)/obj_arm
 KEXTDIR = $(BUILDDIR)/$(KEXT_NAME).kext
 
-# Compilation flags
+# Compiler
 CXX = clang++
-CFLAGS = -Wall -Wextra -Wno-unused-parameter $(OPT_FLAGS)
+
+# 💣 FIX PRINCIPAL (KERNEL MODE FLAGS)
+KEXT_FLAGS = -mkernel -nostdlib -fno-builtin -fno-stack-protector
+
 CXXFLAGS = -Wall -Wextra -Wno-unused-parameter -std=c++17 $(OPT_FLAGS)
-CPPFLAGS = -DKERNEL -DKERNEL_DEBUG -fno-builtin -fno-common -fapple-kext \
-           -DKERNEL_EXTENSION=1 \
-           -I$(SYSROOT)/System/Library/Frameworks/Kernel.framework/Headers \
-           -I$(SYSROOT)/usr/include/c++/v1 \
-           -I$(PWD)/include \
-           -I$(PWD)/Lilu/Lilu/Headers
 
-# Framework paths
-KEXT_INC = $(SYSROOT)/System/Library/Frameworks/Kernel.framework/Headers
+CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
+	-fno-common -fapple-kext \
+	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
+	-I$(PWD)/include \
+	-I$(LILU_PATH)/Lilu/Headers
 
-# Default target
+# Default
 all: info $(KEXTDIR)
 
 info:
 	@echo "========================================"
-	@echo " ForceACL.kext Build System"
+	@echo " ForceACL.kext (FIXED BUILD)"
 	@echo "========================================"
-	@echo " Build Type: $(BUILD_NAME)"
-	@echo " SDK: $(SYSROOT)"
-	@echo " Architectures: $(ARCHS)"
+	@echo " Build: $(BUILD_NAME)"
+	@echo " SDK: $(SDKROOT)"
+	@echo " Archs: $(ARCHS)"
 	@echo "========================================"
 
-# Create directories
+# Directories
 $(BUILDDIR):
-	mkdir -p $(BUILDDIR)/$(KEXT_NAME).kext/Contents/MacOS
-	mkdir -p $(BUILDDIR)/$(KEXT_NAME).kext/Contents/Resources
+	mkdir -p $(KEXTDIR)/Contents/MacOS
+	mkdir -p $(KEXTDIR)/Contents/Resources
 
 $(OBJDIR_X86):
 	mkdir -p $(OBJDIR_X86)
@@ -122,128 +88,101 @@ $(OBJDIR_X86):
 $(OBJDIR_ARM):
 	mkdir -p $(OBJDIR_ARM)
 
-# Build for x86_64
-build_x86_64: | $(BUILDDIR) $(OBJDIR_X86)
+# =========================
+# COMPILATION
+# =========================
+
+build_x86_64: | $(OBJDIR_X86)
 	@echo "Building x86_64..."
 	@for src in $(SOURCES); do \
-		echo "  Compiling: $$src"; \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
-		$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
+		$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(KEXT_FLAGS) \
 			-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
-			-isysroot $(SYSROOT) \
-			-I$(KEXT_INC) \
-			-I$(KEXT_INC)/libkern/c++ \
+			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
 	done
 
-# Build for arm64
-build_arm64: | $(BUILDDIR) $(OBJDIR_ARM)
+build_arm64: | $(OBJDIR_ARM)
 	@echo "Building arm64..."
 	@for src in $(SOURCES); do \
-		echo "  Compiling: $$src"; \
 		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
-		$(CXX) $(CXXFLAGS) $(CPPFLAGS) \
+		$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(KEXT_FLAGS) \
 			-target arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64) \
-			-isysroot $(SYSROOT) \
-			-I$(KEXT_INC) \
-			-I$(KEXT_INC)/libkern/c++ \
+			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
 	done
 
-link_x86_64: build_x86_64
-	@echo "Linking x86_64 (REAL KEXT - ld64)..."
-	@objs=""; \
-	for src in $(SOURCES); do \
-		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
-		objs="$$objs $$obj"; \
-	done; \
-	xcrun ld \
-		-arch x86_64 \
-		-syslibroot $(SYSROOT) \
-		-kext \
-		-undefined dynamic_lookup \
-		-platform_version macos $(DEPLOYMENT_TARGET_X86_64) $(DEPLOYMENT_TARGET_X86_64) \
-		-o $(BUILDDIR)/ForceACL_x86_64 $$objs
+# =========================
+# LINKING (FIXED CRT0 ISSUE)
+# =========================
 
-# Link arm64 - combine all .o files into single executable
-link_arm64: build_arm64
-	@echo "Linking arm64 (FINAL KEXT)..."
+link_x86_64: build_x86_64
+	@echo "Linking x86_64..."
 	@objs=""; \
 	for src in $(SOURCES); do \
-		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
-		objs="$$objs $$obj"; \
+		objs="$$objs $(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 	done; \
 	$(CXX) \
-		-target arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64) \
-		-isysroot $(SYSROOT) \
+		-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
+		-isysroot $(SDKROOT) \
 		-fapple-kext \
-		-nostdlib++ \
+		-nostdlib \
 		-Wl,-kext \
 		-Wl,-bundle \
 		-Wl,-undefined,dynamic_lookup \
-		-Wl,-platform_version,macos,$(DEPLOYMENT_TARGET_ARM64),$(DEPLOYMENT_TARGET_ARM64) \
+		-o $(BUILDDIR)/ForceACL_x86_64 $$objs
+
+link_arm64: build_arm64
+	@echo "Linking arm64..."
+	@objs=""; \
+	for src in $(SOURCES); do \
+		objs="$$objs $(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
+	done; \
+	$(CXX) \
+		-target arm64-apple-macosx$(DEPLOYMENT_TARGET_ARM64) \
+		-isysroot $(SDKROOT) \
+		-fapple-kext \
+		-nostdlib \
+		-Wl,-kext \
+		-Wl,-bundle \
+		-Wl,-undefined,dynamic_lookup \
 		-o $(BUILDDIR)/ForceACL_arm64 $$objs
 
-# Create universal binary from linked arch-specific objects
+# =========================
+# UNIVERSAL
+# =========================
+
 create_universal: link_x86_64 link_arm64
 	@echo "Creating universal binary..."
-	@lipo -create $(BUILDDIR)/ForceACL_x86_64 $(BUILDDIR)/ForceACL_arm64 \
+	@lipo -create \
+		$(BUILDDIR)/ForceACL_x86_64 \
+		$(BUILDDIR)/ForceACL_arm64 \
 		-output $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
 
-# Create x86_64 only binary
-create_x86_64: link_x86_64
-	@echo "Creating x86_64 binary..."
-	@cp $(BUILDDIR)/ForceACL_x86_64 $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
+# =========================
+# FINAL BUILD
+# =========================
 
-# Create arm64 only binary
-create_arm64: link_arm64
-	@echo "Creating arm64 binary..."
-	@cp $(BUILDDIR)/ForceACL_arm64 $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
-
-# Main build target
-$(KEXTDIR): info
-ifneq ($(findstring x86_64,$(ARCHS)),)
-ifneq ($(findstring arm64,$(ARCHS)),)
+$(KEXTDIR): $(BUILDDIR)
 	@$(MAKE) create_universal
-else
-	@$(MAKE) create_x86_64
-endif
-else
-	@$(MAKE) create_arm64
-endif
 	@cp Info.plist $(KEXTDIR)/Contents/Info.plist
 	@echo ""
 	@echo "========================================"
-	@echo " Build complete!"
+	@echo " BUILD SUCCESS (CRT0 FIXED)"
 	@echo " Output: $(KEXTDIR)"
 	@echo "========================================"
 
-# Convenience targets
+# =========================
+# SHORTCUTS
+# =========================
+
 debug:
 	@$(MAKE) BUILD_TYPE=debug all
 
 release:
 	@$(MAKE) BUILD_TYPE=release all
 
-x86_64:
-	@$(MAKE) ARCHS=x86_64 all
-
-arm64:
-	@$(MAKE) ARCHS=arm64 all
-
 clean:
 	rm -rf build
 
-distclean:
-	rm -rf build*
-
-install: $(KEXTDIR)
-	sudo cp -R $(KEXTDIR) /Library/Extensions/
-	sudo touch /Library/Extensions
-	@echo "Installed. Reboot required."
-
-uninstall:
-	sudo rm -rf /Library/Extensions/$(KEXT_NAME).kext
-	sudo touch /Library/Extensions
-
-.PHONY: all info build_x86_64 build_arm64 link_x86_64 link_arm64 create_universal create_x86_64 create_arm64 debug release x86_64 arm64 clean distclean install uninstall
+.PHONY: all debug release clean build_x86_64 build_arm64 link_x86_64 link_arm64 create_universal
