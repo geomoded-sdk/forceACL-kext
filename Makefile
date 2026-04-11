@@ -161,7 +161,8 @@ link_x86_64: build_x86_64
 		-target x86_64-apple-macosx$(DEPLOYMENT_TARGET_X86_64) \
 		-isysroot $(SYSROOT) \
 		-fapple-kext \
-		-nostdlib++ \
+		-nostdlib \
+		-nostartfiles \
 		-Wl,-kext \
 		-Wl,-bundle \
 		-Wl,-undefined,dynamic_lookup \
