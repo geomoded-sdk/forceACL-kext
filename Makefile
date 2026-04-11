@@ -67,6 +67,10 @@ CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-I$(PWD)/include \
 	-I$(LILU_PATH)/Lilu/Headers
 
+# Additional flags from workflow
+OTHER_CFLAGS ?=
+OTHER_LDFLAGS ?=
+
 # Default
 all: info $(KEXTDIR)
 
