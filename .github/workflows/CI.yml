@@ -1,4 +1,4 @@
-name: ForceACL CI (Acidanthera Level)
+name: ForceACL CI (Stable Acidanthera Style)
 
 on:
   push:
@@ -9,7 +9,6 @@ on:
 
 env:
   PROJECT_TYPE: KEXT
-  SDKROOT: ${{ github.workspace }}/MacKernelSDK
   MACOSX_DEPLOYMENT_TARGET: 10.15
   ARCHS: arm64 x86_64
 
@@ -21,7 +20,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: recursive
+          submodules: false
 
       - name: Checkout Lilu
         uses: actions/checkout@v4
@@ -35,25 +34,17 @@ jobs:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
-      - name: Force toolchain sanity
+      # 🔥 FIX: usa SDK real do Xcode (NÃO MacKernelSDK como SDKROOT)
+      - name: Setup Toolchain
         run: |
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          export KERNEL_INC=$PWD/MacKernelSDK
+
           echo "SDKROOT=$SDKROOT"
-          xcrun --show-sdk-path
-          clang++ -v || true
+          echo "Kernel headers=$KERNEL_INC"
 
-      # 🔥 CRÍTICO: impede SDK do sistema de vazar
-      - name: Override Apple SDK leak protection
-        run: |
-          export SDKROOT=$PWD/MacKernelSDK
-          export CC=clang
-          export CXX=clang++
-          export CFLAGS="-isysroot $SDKROOT"
-          export LDFLAGS="-isysroot $SDKROOT"
-          echo "Locked SDKROOT=$SDKROOT"
-
-      - name: CI Bootstrap (ocbuild)
-        run: |
-          curl -Lfs https://raw.githubusercontent.com/acidanthera/ocbuild/master/ci-bootstrap.sh | bash
+      # ❌ REMOVIDO ocbuild (ele quebra mais do que ajuda)
+      # - name: CI Bootstrap (REMOVED)
 
       - name: Lilu Bootstrap
         run: |
@@ -62,21 +53,23 @@ jobs:
       # 💣 BUILD DEBUG
       - name: Build Debug (Universal)
         run: |
-          export SDKROOT=$PWD/MacKernelSDK
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
+
           make BUILD_TYPE=debug ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -mkernel -nostdlib -fno-builtin" \
+            OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -nostdlib -fno-builtin" \
             OTHER_LDFLAGS="-isysroot $SDKROOT -mkernel -nostdlib"
 
       # 💣 BUILD RELEASE
       - name: Build Release (Universal)
         run: |
-          export SDKROOT=$PWD/MacKernelSDK
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
+
           make BUILD_TYPE=release ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -mkernel -nostdlib -fno-builtin" \
+            OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -nostdlib -fno-builtin" \
             OTHER_LDFLAGS="-isysroot $SDKROOT -mkernel -nostdlib"
 
       # 📦 ARTIFACTS
@@ -116,14 +109,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout deps
+      - name: Checkout MacKernelSDK
         uses: actions/checkout@v4
         with:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
-      - name: Run clang static analysis
+      - name: Clang Analyze
         run: |
-          export SDKROOT=$PWD/MacKernelSDK
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
           make ANALYZE=1 SDKROOT=$SDKROOT || true
