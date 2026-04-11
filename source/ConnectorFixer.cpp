@@ -5,6 +5,8 @@
  */
 
 #include <libkern/libkern.h>
+#include <IOKit/IOLib.h>
+
 #include "ForceACL/ConnectorFixer.hpp"
 
 ConnectorFixer::ConnectorFixer()
