@@ -1,4 +1,4 @@
-name: ForceACL CI (Stable Acidanthera Style)
+name: ForceACL CI (MacKernelSDK Native)
 
 on:
   push:
@@ -9,12 +9,13 @@ on:
 
 env:
   PROJECT_TYPE: KEXT
+  SDKROOT: ${{ github.workspace }}/MacKernelSDK
   MACOSX_DEPLOYMENT_TARGET: 10.15
   ARCHS: arm64 x86_64
 
 jobs:
   build:
-    name: Build Kext (Universal)
+    name: Build Kext (MacKernelSDK Only)
     runs-on: macos-latest
 
     steps:
@@ -34,76 +35,68 @@ jobs:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
-      # 🔥 FIX: usa SDK real do Xcode (NÃO MacKernelSDK como SDKROOT)
-      - name: Setup Toolchain
+      # 💣 FORÇA USO DO MACKERNELSDK COMO BASE REAL
+      - name: Setup Kernel SDK Environment
         run: |
-          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
-          export KERNEL_INC=$PWD/MacKernelSDK
+          export SDKROOT=$PWD/MacKernelSDK
+          export KERNEL_SRC=$PWD/MacKernelSDK
+          export CC=clang
+          export CXX=clang++
 
+          echo "USING MacKernelSDK ONLY"
           echo "SDKROOT=$SDKROOT"
-          echo "Kernel headers=$KERNEL_INC"
 
-      # ❌ REMOVIDO ocbuild (ele quebra mais do que ajuda)
-      # - name: CI Bootstrap (REMOVED)
+      # ❌ NÃO usar ocbuild (ele conflita com kernel SDK)
+      # ❌ NÃO usar xcrun SDK
 
       - name: Lilu Bootstrap
         run: |
           curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh | bash
 
       # 💣 BUILD DEBUG
-      - name: Build Debug (Universal)
+      - name: Build Debug (Kernel SDK)
         run: |
-          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          export SDKROOT=$PWD/MacKernelSDK
           make clean
 
           make BUILD_TYPE=debug ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -nostdlib -fno-builtin" \
+            OTHER_CFLAGS="-isysroot $SDKROOT -I$SDKROOT -mkernel -nostdlib -fno-builtin" \
             OTHER_LDFLAGS="-isysroot $SDKROOT -mkernel -nostdlib"
 
       # 💣 BUILD RELEASE
-      - name: Build Release (Universal)
+      - name: Build Release (Kernel SDK)
         run: |
-          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          export SDKROOT=$PWD/MacKernelSDK
           make clean
 
           make BUILD_TYPE=release ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -nostdlib -fno-builtin" \
+            OTHER_CFLAGS="-isysroot $SDKROOT -I$SDKROOT -mkernel -nostdlib -fno-builtin" \
             OTHER_LDFLAGS="-isysroot $SDKROOT -mkernel -nostdlib"
 
       # 📦 ARTIFACTS
-      - name: Package Kext
+      - name: Package
         run: |
           mkdir -p artifacts
 
           if [ -d "build/Debug/ForceACL.kext" ]; then
-            cp -R build/Debug/ForceACL.kext artifacts/ForceACL-Debug.kext
-            (cd artifacts && zip -r ForceACL-Debug.zip ForceACL-Debug.kext)
+            cp -R build/Debug/ForceACL.kext artifacts/
           fi
 
           if [ -d "build/Release/ForceACL.kext" ]; then
-            cp -R build/Release/ForceACL.kext artifacts/ForceACL.kext
-            (cd artifacts && zip -r ForceACL-Release.zip ForceACL.kext)
+            cp -R build/Release/ForceACL.kext artifacts/
           fi
 
-      - name: Upload artifacts
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: ForceACL-Kext
           path: artifacts
 
-      - name: Release upload
-        if: github.event_name == 'release'
-        uses: svenstaro/upload-release-action@v2
-        with:
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
-          file: artifacts/*.zip
-          file_glob: true
-
 
   analyze:
-    name: Static Analysis
+    name: Analyze (Kernel SDK)
     runs-on: macos-latest
 
     steps:
@@ -115,8 +108,8 @@ jobs:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
-      - name: Clang Analyze
+      - name: Kernel Analyze
         run: |
-          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
+          export SDKROOT=$PWD/MacKernelSDK
           make clean
           make ANALYZE=1 SDKROOT=$SDKROOT || true
