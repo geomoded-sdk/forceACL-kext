@@ -1,4 +1,4 @@
-name: ForceACL CI (MacKernelSDK Native)
+name: ForceACL CI (Stable Kernel Build)
 
 on:
   push:
@@ -9,19 +9,18 @@ on:
 
 env:
   PROJECT_TYPE: KEXT
-  SDKROOT: ${{ github.workspace }}/MacKernelSDK
   MACOSX_DEPLOYMENT_TARGET: 10.15
   ARCHS: arm64 x86_64
 
 jobs:
   build:
-    name: Build Kext (MacKernelSDK Only)
+    name: Build Kext (Stable)
     runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false
+          submodules: recursive
 
       - name: Checkout Lilu
         uses: actions/checkout@v4
@@ -35,81 +34,99 @@ jobs:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
-      # 💣 FORÇA USO DO MACKERNELSDK COMO BASE REAL
-      - name: Setup Kernel SDK Environment
+      # 💣 CORRETO: usa SDK real da Apple
+      - name: Setup SDK
         run: |
-          export SDKROOT=$PWD/MacKernelSDK
-          export KERNEL_SRC=$PWD/MacKernelSDK
-          export CC=clang
-          export CXX=clang++
-
-          echo "USING MacKernelSDK ONLY"
+          echo "Setting up proper macOS SDK..."
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           echo "SDKROOT=$SDKROOT"
 
-      # ❌ NÃO usar ocbuild (ele conflita com kernel SDK)
-      # ❌ NÃO usar xcrun SDK
-
+      # Bootstrap Lilu (ok)
       - name: Lilu Bootstrap
         run: |
           curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh | bash
 
-      # 💣 BUILD DEBUG
-      - name: Build Debug (Kernel SDK)
+      # =========================
+      # BUILD DEBUG
+      # =========================
+      - name: Build Debug
         run: |
-          export SDKROOT=$PWD/MacKernelSDK
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
 
           make BUILD_TYPE=debug ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -I$SDKROOT -mkernel -nostdlib -fno-builtin" \
-            OTHER_LDFLAGS="-isysroot $SDKROOT -mkernel -nostdlib"
+            OTHER_CFLAGS="\
+              -isysroot $SDKROOT \
+              -I$PWD/MacKernelSDK \
+              -mkernel -fno-builtin -fno-exceptions" \
+            OTHER_LDFLAGS="\
+              -isysroot $SDKROOT \
+              -mkext -undefined dynamic_lookup"
 
-      # 💣 BUILD RELEASE
-      - name: Build Release (Kernel SDK)
+      # =========================
+      # BUILD RELEASE
+      # =========================
+      - name: Build Release
         run: |
-          export SDKROOT=$PWD/MacKernelSDK
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
 
           make BUILD_TYPE=release ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -I$SDKROOT -mkernel -nostdlib -fno-builtin" \
-            OTHER_LDFLAGS="-isysroot $SDKROOT -mkernel -nostdlib"
+            OTHER_CFLAGS="\
+              -isysroot $SDKROOT \
+              -I$PWD/MacKernelSDK \
+              -mkernel -fno-builtin -fno-exceptions" \
+            OTHER_LDFLAGS="\
+              -isysroot $SDKROOT \
+              -mkext -undefined dynamic_lookup"
 
-      # 📦 ARTIFACTS
+      # 📦 PACKAGE
       - name: Package
         run: |
           mkdir -p artifacts
 
           if [ -d "build/Debug/ForceACL.kext" ]; then
-            cp -R build/Debug/ForceACL.kext artifacts/
+            cp -R build/Debug/ForceACL.kext artifacts/ForceACL-Debug.kext
+            (cd artifacts && zip -r ForceACL-Debug.zip ForceACL-Debug.kext)
           fi
 
           if [ -d "build/Release/ForceACL.kext" ]; then
-            cp -R build/Release/ForceACL.kext artifacts/
+            cp -R build/Release/ForceACL.kext artifacts/ForceACL.kext
+            (cd artifacts && zip -r ForceACL-Release.zip ForceACL.kext)
           fi
 
-      - name: Upload
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ForceACL-Kext
           path: artifacts
 
+      - name: Upload Release
+        if: github.event_name == 'release'
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: artifacts/*.zip
+          file_glob: true
+
 
   analyze:
-    name: Analyze (Kernel SDK)
+    name: Static Analysis
     runs-on: macos-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout MacKernelSDK
+      - name: Checkout deps
         uses: actions/checkout@v4
         with:
           repository: acidanthera/MacKernelSDK
           path: MacKernelSDK
 
-      - name: Kernel Analyze
+      - name: Analyze
         run: |
-          export SDKROOT=$PWD/MacKernelSDK
+          export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
           make ANALYZE=1 SDKROOT=$SDKROOT || true
