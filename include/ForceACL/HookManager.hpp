@@ -7,10 +7,16 @@
 #define FORCEACL_HOOKMANAGER_HPP
 
 #include <stdint.h>
+#include <IOKit/IOService.h>
+#include <IOKit/IOLib.h>
+
+extern bool gForceACLVerbose;
+
+class FramebufferPatcher;
 
 class HookManager {
 public:
-    HookManager();
+    HookManager(FramebufferPatcher* patcher = nullptr);
     ~HookManager();
     
     bool registerPCIHook();
@@ -29,6 +35,7 @@ private:
     bool m_pciHookRegistered;
     bool m_framebufferHookRegistered;
     bool m_verboseLogging;
+    FramebufferPatcher* m_fbPatcher;
     
     // Private helper methods
     void applyFramebufferPatches(IOService* framebuffer);
