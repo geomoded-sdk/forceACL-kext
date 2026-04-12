@@ -48,6 +48,8 @@ DEPLOYMENT_TARGET_ARM64 = 11.0
 
 # Archs
 ARCHS ?= arm64 x86_64
+HAS_X86 := $(findstring x86_64,$(ARCHS))
+HAS_ARM64 := $(findstring arm64,$(ARCHS))
 
 # Output
 BUILDDIR = build/$(BUILD_NAME)
@@ -209,15 +211,21 @@ link_arm64: build_arm64
 		-o $(BUILDDIR)/ForceACL_arm64 $$objs
 
 # =========================
-# UNIVERSAL
+# UNIVERSAL / FINAL BINARY
 # =========================
 
+ifeq ($(HAS_ARM64),arm64)
 create_universal: link_x86_64 link_arm64
 	@echo "Creating universal binary..."
 	@lipo -create \
 		$(BUILDDIR)/ForceACL_x86_64 \
 		$(BUILDDIR)/ForceACL_arm64 \
 		-output $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
+else
+create_universal: link_x86_64
+	@echo "Copying x86_64 binary (no arm64 build requested)"
+	@cp $(BUILDDIR)/ForceACL_x86_64 $(KEXTDIR)/Contents/MacOS/$(PRODUCT_NAME)
+endif
 
 # =========================
 # FINAL BUILD
