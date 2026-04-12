@@ -128,7 +128,7 @@ $(OBJDIR_ARM):
 build_x86_64: | $(OBJDIR_X86)
 	@echo "Building x86_64..."
 	@test -f "$(LILU_HEADERS_PATH)/Headers/plugin_start.hpp" || echo "ERROR: plugin_start.hpp not found!"
-	clang++ -E -D__test__=1 -c source/plugin_main.cpp -o /dev/null 2>&1 | head -1 || true
+	@echo "SDKROOT=$(SDKROOT)"
 	@for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		echo ">>> Compiling $$src with -D__x86_64__"; \
