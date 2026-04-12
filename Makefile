@@ -7,12 +7,8 @@ MODULE_VERSION = 1.0.0
 KEXT_NAME = ForceACL
 LILU_PATH ?= $(PWD)/Lilu
 
-# Lilu headers are in Lilu/Lilu/Headers for both CI and local
+# Lilu headers are always in Lilu/Lilu/Headers (both CI and local)
 LILU_HEADERS_PATH := $(LILU_PATH)/Lilu
-
-# Debug info
-$(info LILU_HEADERS_PATH=$(LILU_HEADERS_PATH))
-$(info LILU_CHECK=$(wildcard $(LILU_HEADERS_PATH)/Headers/plugin_start.hpp))
 
 # Build type
 BUILD_TYPE ?= debug
