@@ -134,19 +134,19 @@ build_x86_64: | $(OBJDIR_X86)
 		echo ">>> Compiling $$src with -D__x86_64__"; \
 		clang++ -Wall -Wextra -Wno-unused-parameter -std=c++17 -g -O0 \
 			-target x86_64-apple-macos10.6 \
+			-D__x86_64__ \
+			-D__arm64__ \
 			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
 			-DLILU_SUPPORTS_1_7=1 -DPRODUCT_NAME=ForceACL -DMODULE_VERSION=1.0.0 \
 			-fno-common -fapple-kext \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
-			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/PrivateHeaders \
 			-I$(SDKROOT)/usr/include \
 			-Iinclude \
 			-I$(LILU_HEADERS_PATH) \
 			-I$(LILU_HEADERS_PATH)/Headers \
 			-I$(LILU_HEADERS_PATH)/PrivateHeaders \
 			-Iinclude/ForceACL \
-			-D__x86_64__=1 \
 			-mkernel -nostdlib -fno-builtin -fno-stack-protector \
 			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
@@ -158,19 +158,19 @@ build_arm64: | $(OBJDIR_ARM)
 		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
 		clang++ -Wall -Wextra -Wno-unused-parameter -std=c++17 -g -O0 \
 			-target arm64-apple-macos11.0 \
+			-D__arm64__ \
+			-D__x86_64__ \
 			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
 			-DLILU_SUPPORTS_1_7=1 -DPRODUCT_NAME=ForceACL -DMODULE_VERSION=1.0.0 \
 			-fno-common -fapple-kext \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
-			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/PrivateHeaders \
 			-I$(SDKROOT)/usr/include \
 			-Iinclude \
 			-I$(LILU_HEADERS_PATH) \
 			-I$(LILU_HEADERS_PATH)/Headers \
 			-I$(LILU_HEADERS_PATH)/PrivateHeaders \
 			-Iinclude/ForceACL \
-			-D__arm64__=1 \
 			-mkernel -nostdlib -fno-builtin -fno-stack-protector \
 			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
