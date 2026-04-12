@@ -6,6 +6,7 @@ PRODUCT_NAME = ForceACL
 MODULE_VERSION = 1.0.0
 KEXT_NAME = ForceACL
 LILU_PATH ?= $(PWD)/Lilu
+LILU_HEADERS_PATH := $(shell if [ -d "$(LILU_PATH)/Lilu/Headers" ]; then echo "$(LILU_PATH)/Lilu"; else echo "$(LILU_PATH)"; fi)
 
 # Build type
 BUILD_TYPE ?= debug
@@ -66,8 +67,8 @@ CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
 	-I$(SDKROOT)/usr/include \
 	-I$(PWD)/include \
-	-I$(LILU_PATH)/Lilu/Headers \
-	-I$(LILU_PATH)/Lilu/PrivateHeaders
+	-I$(LILU_HEADERS_PATH)/Headers \
+	-I$(LILU_HEADERS_PATH)/PrivateHeaders
 
 # Additional flags from workflow
 OTHER_CFLAGS ?= -fapple-kext
