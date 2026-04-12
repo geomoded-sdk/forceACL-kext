@@ -62,16 +62,8 @@ jobs:
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
 
-          make BUILD_TYPE=debug ARCHS="$ARCHS" \
-            SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -Itmp/MacKernelSDK -I$PWD/MacKernelSDK -I$PWD/Lilu/Lilu/Headers -I$PWD/Lilu/Lilu/PrivateHeaders -I$PWD/include/ForceACL -I$PWD/include/ForceACL/LiluHeaders -I$PWD/include/ForceACL/LiluHeaders/Headers -I$PWD/include/ForceACL/LiluHeaders/PrivateHeaders -mkernel -fno-builtin -fno-exceptions -fapple-kext -DKERNEL -DKERNEL_PRIVATE -DDEBUG -D__ACIDANTHERA_MAC_SDK -DLILU_SUPPORTS_X86_64=1 -DLILU_SUPPORTS_ARM64=1" \
-            OTHER_LDFLAGS="\
-              -isysroot $SDKROOT \
-              -Xlinker -kext \
-              -Xlinker -e \
-              -Xlinker _PLUGIN_ENTRY \
-              -Xlinker -undefined \
-              -Xlinker dynamic_lookup"
+          make BUILD_TYPE=debug ARCHS="$ARCHS" SDKROOT=$SDKROOT \
+            OTHER_LDFLAGS="-Xlinker -kext -Xlinker -e -Xlinker _PLUGIN_ENTRY -Xlinker -undefined -Xlinker dynamic_lookup"
 
       # BUILD RELEASE
       # =========================
@@ -80,16 +72,8 @@ jobs:
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
 
-          make BUILD_TYPE=release ARCHS="$ARCHS" \
-            SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -Itmp/MacKernelSDK -I$PWD/MacKernelSDK -I$PWD/Lilu/Lilu/Headers -I$PWD/Lilu/Lilu/PrivateHeaders -I$PWD/include/ForceACL -I$PWD/include/ForceACL/LiluHeaders -I$PWD/include/ForceACL/LiluHeaders/Headers -I$PWD/include/ForceACL/LiluHeaders/PrivateHeaders -mkernel -fno-builtin -fno-exceptions -fapple-kext -DKERNEL -DKERNEL_PRIVATE -D__ACIDANTHERA_MAC_SDK -DLILU_SUPPORTS_X86_64=1 -DLILU_SUPPORTS_ARM64=1" \
-            OTHER_LDFLAGS="\
-              -isysroot $SDKROOT \
-              -Xlinker -kext \
-              -Xlinker -e \
-              -Xlinker _PLUGIN_ENTRY \
-              -Xlinker -undefined \
-              -Xlinker dynamic_lookup"
+          make BUILD_TYPE=release ARCHS="$ARCHS" SDKROOT=$SDKROOT \
+            OTHER_LDFLAGS="-Xlinker -kext -Xlinker -e -Xlinker _PLUGIN_ENTRY -Xlinker -undefined -Xlinker dynamic_lookup"
 
       # 📦 PACKAGE
       - name: Package

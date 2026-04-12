@@ -73,6 +73,7 @@ CXXFLAGS = -Wall -Wextra -Wno-unused-parameter -std=c++17 $(OPT_FLAGS)
 CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-DPRODUCT_NAME=$(PRODUCT_NAME) \
 	-DMODULE_VERSION=$(MODULE_VERSION) \
+	-D__x86_64__ -D__arm64__ \
 	-fno-common \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
@@ -83,9 +84,7 @@ CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-I$(PWD)/include/ForceACL \
 	-I$(PWD)/Lilu/Lilu/Headers \
 	-I$(PWD)/Lilu/Lilu/PrivateHeaders \
-	-DLILU_SUPPORTS_1_7=1 \
-	-D__x86_64__=1 \
-	-D__arm64__=1
+	-DLILU_SUPPORTS_1_7=1
 
 # Additional flags from workflow
 OTHER_CFLAGS ?= -fapple-kext
