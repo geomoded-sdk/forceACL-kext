@@ -10,6 +10,7 @@
 #include "plugin_start.hpp"
 #include "kern_version.hpp"
 #include "kern_util.hpp"
+#include "kern_api.hpp"
 
 #include "ForceACL/ForceACL.hpp"
 
@@ -38,7 +39,7 @@ void forceACL_start() {
     }
 }
 
-extern "C" PluginConfiguration ForceACL_config = {
+PluginConfiguration ADDPR(config) = {
     xStringify(PRODUCT_NAME),
     parseModuleVersion(xStringify(MODULE_VERSION)),
     LiluAPI::AllowNormal,
