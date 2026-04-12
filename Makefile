@@ -139,6 +139,7 @@ build_x86_64: | $(OBJDIR_X86)
 			-fno-common -fapple-kext \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
+			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/PrivateHeaders \
 			-I$(SDKROOT)/usr/include \
 			-Iinclude \
 			-I$(LILU_HEADERS_PATH) \
@@ -162,6 +163,7 @@ build_arm64: | $(OBJDIR_ARM)
 			-fno-common -fapple-kext \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
+			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/PrivateHeaders \
 			-I$(SDKROOT)/usr/include \
 			-Iinclude \
 			-I$(LILU_HEADERS_PATH) \
