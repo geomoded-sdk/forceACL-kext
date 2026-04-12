@@ -135,6 +135,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout Lilu
+        uses: actions/checkout@v4
+        with:
+          repository: acidanthera/Lilu
+          ref: 1.7.2
+          path: Lilu
+
       - name: Checkout deps
         uses: actions/checkout@v4
         with:
