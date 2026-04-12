@@ -3,6 +3,7 @@
 #
 
 PRODUCT_NAME = ForceACL
+MODULE_VERSION = 1.0.0
 KEXT_NAME = ForceACL
 LILU_PATH ?= $(PWD)/Lilu
 
