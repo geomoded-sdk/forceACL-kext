@@ -128,6 +128,7 @@ $(OBJDIR_ARM):
 build_x86_64: | $(OBJDIR_X86)
 	@echo "Building x86_64..."
 	@test -f "$(LILU_HEADERS_PATH)/Headers/plugin_start.hpp" || echo "ERROR: plugin_start.hpp not found!"
+	@echo "DEBUG: CXX=$(CXX) CXXFLAGS=$(CXXFLAGS) CPPFLAGS=$(CPPFLAGS)"
 	@for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		$(CXX) $(CXXFLAGS) \
