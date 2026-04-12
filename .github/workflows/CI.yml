@@ -29,6 +29,13 @@ jobs:
           ref: 1.7.2
           path: Lilu
 
+      - name: Debug Lilu path
+        run: |
+          echo "=== Lilu folder structure ==="
+          ls -la Lilu/
+          echo "=== Lilu/Lilu folder ==="
+          ls -la Lilu/Lilu/ 2>/dev/null || echo "No Lilu/Lilu subfolder"
+
       - name: Checkout MacKernelSDK
         uses: actions/checkout@v4
         with:
