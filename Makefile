@@ -66,7 +66,8 @@ CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
 	-I$(SDKROOT)/usr/include \
 	-I$(PWD)/include \
-	-I$(LILU_PATH)/Lilu/Headers
+	-I$(LILU_PATH)/Lilu/Headers \
+	-I$(LILU_PATH)/Lilu/PrivateHeaders
 
 # Additional flags from workflow
 OTHER_CFLAGS ?= -fapple-kext
