@@ -17,8 +17,6 @@ LILU_HEADERS_PATH := $(PWD)/include/ForceACL/LiluHeaders
 $(info Using copied Lilu headers)
 endif
 
-$(info LILU_HEADERS_CHECK=$(wildcard $(LILU_HEADERS_PATH)/Headers/plugin_start.hpp))
-
 # Build type
 BUILD_TYPE ?= debug
 
@@ -78,8 +76,8 @@ CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
 	-I$(SDKROOT)/usr/include \
 	-I$(PWD)/include \
-	-I$(LILU_HEADERS_PATH)/Headers \
-	-I$(LILU_HEADERS_PATH)/PrivateHeaders
+	-I$(LILU_HEADERS_PATH) \
+	-I$(PWD)/Lilu/Lilu/PrivateHeaders
 
 # Additional flags from workflow
 OTHER_CFLAGS ?= -fapple-kext
