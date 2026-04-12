@@ -10,6 +10,8 @@ LILU_PATH ?= $(PWD)/Lilu
 # Lilu headers are always in Lilu/Lilu/Headers (both CI and local)
 LILU_HEADERS_PATH := $(LILU_PATH)/Lilu
 
+$(info LILU_HEADERS_CHECK=$(wildcard $(LILU_HEADERS_PATH)/Headers/plugin_start.hpp))
+
 # Build type
 BUILD_TYPE ?= debug
 
@@ -121,9 +123,7 @@ $(OBJDIR_ARM):
 
 build_x86_64: | $(OBJDIR_X86)
 	@echo "Building x86_64..."
-	@echo "CXX=$(CXX)"
-	@echo "CPPFLAGS=$(CPPFLAGS)"
-	@echo "LILU_HEADERS=$(LILU_HEADERS_PATH)/Headers"
+	@test -f "$(LILU_HEADERS_PATH)/Headers/plugin_start.hpp" || echo "ERROR: plugin_start.hpp not found!"
 	@for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(KEXT_FLAGS) $(OTHER_CFLAGS) \
