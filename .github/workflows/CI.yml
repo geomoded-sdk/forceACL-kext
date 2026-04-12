@@ -48,10 +48,12 @@ jobs:
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           echo "SDKROOT=$SDKROOT"
 
-      # Bootstrap Lilu (SKIP - we already have Lilu checked out)
-      # - name: Lilu Bootstrap
-      #   run: |
-      #     curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh | bash
+      # Bootstrap Lilu to get latest MacKernelSDK headers
+      - name: Lilu Bootstrap
+        run: |
+          curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh | bash
+          # Copy headers from bootstrap location
+          cp -r tmp/MacKernelSDK/* MacKernelSDK/ 2>/dev/null || true
 
       # =========================
       # BUILD DEBUG
