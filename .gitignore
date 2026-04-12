@@ -17,3 +17,8 @@ build/
 
 # Temporary files
 *~
+nul
+node_modules/
+*.exe
+*.zip
+*.ps1
