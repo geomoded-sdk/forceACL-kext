@@ -128,12 +128,11 @@ $(OBJDIR_ARM):
 build_x86_64: | $(OBJDIR_X86)
 	@echo "Building x86_64..."
 	@test -f "$(LILU_HEADERS_PATH)/Headers/plugin_start.hpp" || echo "ERROR: plugin_start.hpp not found!"
-	@echo "COMMAND: $(CXX) $(CXXFLAGS) -target x86_64-apple-macos10.6 $(CPPFLAGS) $(KEXT_FLAGS) $(OTHER_CFLAGS) -isysroot $(SDKROOT)"
 	@for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		$(CXX) $(CXXFLAGS) \
 			-target x86_64-apple-macos10.6 \
-			$(CPPFLAGS) $(KEXT_FLAGS) $(OTHER_CFLAGS) \
+			$(CPPFLAGS) -D__x86_64__ $(KEXT_FLAGS) $(OTHER_CFLAGS) \
 			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
 	done
@@ -144,7 +143,7 @@ build_arm64: | $(OBJDIR_ARM)
 		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
 		$(CXX) $(CXXFLAGS) \
 			-target arm64-apple-macos11.0 \
-			$(CPPFLAGS) $(KEXT_FLAGS) $(OTHER_CFLAGS) \
+			$(CPPFLAGS) -D__arm64__ $(KEXT_FLAGS) $(OTHER_CFLAGS) \
 			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
 	done
