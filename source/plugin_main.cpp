@@ -30,7 +30,7 @@ extern "C" {
             plugin->start();
         }
     }
-
+    
     PluginConfiguration ADDPR(config) = {
         xStringify(PRODUCT_NAME),
         parseModuleVersion(xStringify(MODULE_VERSION)),

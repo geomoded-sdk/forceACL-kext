@@ -71,6 +71,8 @@ KEXT_FLAGS = -mkernel -nostdlib -fno-builtin -fno-stack-protector
 CXXFLAGS = -Wall -Wextra -Wno-unused-parameter -std=c++17 $(OPT_FLAGS)
 
 CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
+	-DPRODUCT_NAME=$(PRODUCT_NAME) \
+	-DMODULE_VERSION=$(MODULE_VERSION) \
 	-fno-common \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 	-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
