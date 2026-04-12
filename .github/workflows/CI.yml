@@ -33,8 +33,9 @@ jobs:
         run: |
           echo "=== Lilu folder structure ==="
           ls -la Lilu/
-          echo "=== Lilu/Lilu folder ==="
-          ls -la Lilu/Lilu/ 2>/dev/null || echo "No Lilu/Lilu subfolder"
+          echo "=== Lilu Headers check ==="
+          ls Lilu/Headers 2>/dev/null || echo "No Lilu/Headers"
+          ls Lilu/Lilu/Headers 2>/dev/null || echo "No Lilu/Lilu/Headers"
 
       - name: Checkout MacKernelSDK
         uses: actions/checkout@v4
