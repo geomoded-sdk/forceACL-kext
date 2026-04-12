@@ -62,6 +62,7 @@ jobs:
           make clean
 
           make BUILD_TYPE=debug ARCHS="$ARCHS" SDKROOT=$SDKROOT \
+            OTHER_CFLAGS="-D__x86_64__ -D__arm64__" \
             OTHER_LDFLAGS="-Xlinker -kext -Xlinker -e -Xlinker _PLUGIN_ENTRY -Xlinker -undefined -Xlinker dynamic_lookup"
 
       # BUILD RELEASE
@@ -72,6 +73,7 @@ jobs:
           make clean
 
           make BUILD_TYPE=release ARCHS="$ARCHS" SDKROOT=$SDKROOT \
+            OTHER_CFLAGS="-D__x86_64__ -D__arm64__" \
             OTHER_LDFLAGS="-Xlinker -kext -Xlinker -e -Xlinker _PLUGIN_ENTRY -Xlinker -undefined -Xlinker dynamic_lookup"
 
       # 📦 PACKAGE
