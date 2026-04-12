@@ -137,9 +137,9 @@ build_x86_64: | $(OBJDIR_X86)
 			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
 			-DLILU_SUPPORTS_1_7=1 -DPRODUCT_NAME=ForceACL -DMODULE_VERSION=1.0.0 \
 			-fno-common -fapple-kext \
-			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers \
-			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers/libkern \
-			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/usr/include \
+			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
+			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
+			-I$(SDKROOT)/usr/include \
 			-Iinclude \
 			-I$(LILU_HEADERS_PATH) \
 			-I$(LILU_HEADERS_PATH)/Headers \
@@ -160,15 +160,15 @@ build_arm64: | $(OBJDIR_ARM)
 			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
 			-DLILU_SUPPORTS_1_7=1 -DPRODUCT_NAME=ForceACL -DMODULE_VERSION=1.0.0 \
 			-fno-common -fapple-kext \
-			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers \
-			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers/libkern \
-			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/usr/include \
+			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
+			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
+			-I$(SDKROOT)/usr/include \
 			-Iinclude \
 			-I$(LILU_HEADERS_PATH) \
 			-I$(LILU_HEADERS_PATH)/Headers \
 			-I$(LILU_HEADERS_PATH)/PrivateHeaders \
 			-Iinclude/ForceACL \
-			-D__arm64__ \
+			-D__arm64__=1 \
 			-mkernel -nostdlib -fno-builtin -fno-stack-protector \
 			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
