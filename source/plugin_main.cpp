@@ -11,44 +11,21 @@
 #include "kern_version.hpp"
 #include "kern_util.hpp"
 
-#include "plugin_start.hpp"
-#include "kern_version.hpp"
-#include "kern_util.hpp"
+/**
+ * ForceACL Plugin - Lilu 1.7.x compatible
+ */
+#include <IOKit/IOService.h>
+#include <IOKit/IOLib.h>
 
 #include "ForceACL/ForceACL.hpp"
 
-extern "C" {
-int PE_parse_boot_arg_num(const char* arg, void* value);
-}
-
-static const char* forceacl_disableArg[] = { "-ffacloff", "-noffacl" };
-static const char* forceacl_debugArg[] = { "ffacl_debug", "ffacl=0" };
-static const char* forceacl_betaArg[] = { "-ffaclbeta" };
-
-void ForceACL_pluginStart() {
+extern "C" void ForceACL_start() {
     auto* plugin = ForceACLPlugin::getInstance();
     if (plugin) {
-        IOLog("ForceACL v" xStringify(MODULE_VERSION) " - Initializing...\n");
+        IOLog("ForceACL loaded\n");
         plugin->init();
         plugin->start();
     }
-}
-
-extern "C" {
-PluginConfiguration ForceACL_config = {
-    xStringify(PRODUCT_NAME),
-    parseModuleVersion(xStringify(MODULE_VERSION)),
-    LiluAPI::AllowNormal,
-    forceacl_disableArg,
-    2,
-    forceacl_debugArg,
-    2,
-    forceacl_betaArg,
-    1,
-    KernelVersion::HighSierra,
-    KernelVersion::Sonoma,
-    ForceACL_pluginStart
-};
 }
 
 static const char* disableArg[] = { "-ffacloff", "-noffacl" };
