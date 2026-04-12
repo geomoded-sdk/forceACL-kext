@@ -11,10 +11,39 @@
 #include "kern_version.hpp"
 #include "kern_util.hpp"
 
+#define LILU_CUSTOM_KMOD_INIT
+#define LILU_CUSTOM_IOKIT_INIT
+
 #include "ForceACL/ForceACL.hpp"
 
 extern "C" {
 int PE_parse_boot_arg_num(const char* arg, void* value);
+
+void ADDPR(pluginStart)() {
+    auto* plugin = ForceACLPlugin::getInstance();
+    if (plugin) {
+        IOLog("ForceACL v" xStringify(MODULE_VERSION) " - Initializing...\n");
+        plugin->init();
+        plugin->start();
+    }
+}
+
+PluginConfiguration ADDPR(config) = {
+    xStringify(PRODUCT_NAME),
+    parseModuleVersion(xStringify(MODULE_VERSION)),
+    LiluAPI::AllowNormal,
+    disableArg,
+    2,
+    debugArg,
+    2,
+    betaArg,
+    1,
+    KernelVersion::HighSierra,
+    KernelVersion::Sonoma,
+    ADDPR(pluginStart)
+};
+
+bool ADDPR(startSuccess);
 }
 
 static const char* disableArg[] = { "-ffacloff", "-noffacl" };
