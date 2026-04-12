@@ -125,6 +125,9 @@ $(OBJDIR_ARM):
 
 build_x86_64: | $(OBJDIR_X86)
 	@echo "Building x86_64..."
+	@echo "CXX=$(CXX)"
+	@echo "CPPFLAGS=$(CPPFLAGS)"
+	@echo "LILU_HEADERS=$(LILU_HEADERS_PATH)/Headers"
 	@for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
 		$(CXX) $(CXXFLAGS) $(CPPFLAGS) $(KEXT_FLAGS) $(OTHER_CFLAGS) \
