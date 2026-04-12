@@ -129,9 +129,11 @@ build_x86_64: | $(OBJDIR_X86)
 	@echo "Building x86_64..."
 	@test -f "$(LILU_HEADERS_PATH)/Headers/plugin_start.hpp" || echo "ERROR: plugin_start.hpp not found!"
 	@echo "SDKROOT=$(SDKROOT)"
+	@echo "[Macro check] clang++ -target x86_64-apple-macos10.6 -dM -E - | grep __x86_64__"
+	@clang++ -target x86_64-apple-macos10.6 -dM -E - </dev/null | grep __x86_64__ || true
 	@for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
-		echo ">>> Compiling $$src with -D__x86_64__"; \
+		echo "CMD: clang++ -Wall -Wextra -Wno-unused-parameter -std=c++17 -g -O0 -target x86_64-apple-macos10.6 $$src"; \
 		clang++ -Wall -Wextra -Wno-unused-parameter -std=c++17 -g -O0 \
 			-target x86_64-apple-macos10.6 \
 			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
