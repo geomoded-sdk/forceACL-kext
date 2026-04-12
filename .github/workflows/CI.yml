@@ -50,10 +50,10 @@ jobs:
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           echo "SDKROOT=$SDKROOT"
 
-      # Bootstrap Lilu (ok)
-      - name: Lilu Bootstrap
-        run: |
-          curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh | bash
+      # Bootstrap Lilu (SKIP - we already have Lilu checked out)
+      # - name: Lilu Bootstrap
+      #   run: |
+      #     curl -Lfs https://raw.githubusercontent.com/acidanthera/Lilu/master/Lilu/Scripts/bootstrap.sh | bash
 
       # =========================
       # BUILD DEBUG
@@ -68,6 +68,8 @@ jobs:
             OTHER_CFLAGS="\
               -isysroot $SDKROOT \
               -I$PWD/MacKernelSDK \
+              -I$PWD/Lilu/Lilu/Headers \
+              -I$PWD/Lilu/Lilu/PrivateHeaders \
               -mkernel -fno-builtin -fno-exceptions -fapple-kext" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
@@ -89,6 +91,8 @@ jobs:
             OTHER_CFLAGS="\
               -isysroot $SDKROOT \
               -I$PWD/MacKernelSDK \
+              -I$PWD/Lilu/Lilu/Headers \
+              -I$PWD/Lilu/Lilu/PrivateHeaders \
               -mkernel -fno-builtin -fno-exceptions -fapple-kext" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
@@ -152,4 +156,4 @@ jobs:
         run: |
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
-          make ANALYZE=1 SDKROOT=$SDKROOT OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -fapple-kext" OTHER_LDFLAGS="-isysroot $SDKROOT -Xlinker -kext -Xlinker -undefined -Xlinker dynamic_lookup" || true
+          make ANALYZE=1 SDKROOT=$SDKROOT OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -I$PWD/Lilu/Lilu/Headers -I$PWD/Lilu/Lilu/PrivateHeaders -mkernel -fapple-kext" OTHER_LDFLAGS="-isysroot $SDKROOT -Xlinker -kext -Xlinker -undefined -Xlinker dynamic_lookup" || true
