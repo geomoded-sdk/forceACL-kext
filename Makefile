@@ -145,7 +145,7 @@ build_x86_64: | $(OBJDIR_X86)
 			-I$(LILU_HEADERS_PATH)/Headers \
 			-I$(LILU_HEADERS_PATH)/PrivateHeaders \
 			-Iinclude/ForceACL \
-			-D__x86_64__ \
+			-D__x86_64__=1 \
 			-mkernel -nostdlib -fno-builtin -fno-stack-protector \
 			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
