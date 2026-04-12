@@ -7,15 +7,8 @@ MODULE_VERSION = 1.0.0
 KEXT_NAME = ForceACL
 LILU_PATH ?= $(PWD)/Lilu
 
-# Lilu headers: prefer include/ForceACL/LiluHeaders (copied), fallback to Lilu/Lilu/Headers
-LILU_CHECK := $(wildcard $(PWD)/include/ForceACL/LiluHeaders/plugin_start.hpp)
-ifeq ($(LILU_CHECK),)
+# Use Lilu headers from submodule directly
 LILU_HEADERS_PATH := $(PWD)/Lilu/Lilu
-$(info Using original Lilu headers)
-else
-LILU_HEADERS_PATH := $(PWD)/include/ForceACL/LiluHeaders
-$(info Using copied Lilu headers)
-endif
 
 # Build type
 BUILD_TYPE ?= debug

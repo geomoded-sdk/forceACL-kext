@@ -29,10 +29,9 @@ jobs:
           ref: 1.7.2
           path: Lilu
 
-      - name: Copy Lilu headers (debug)
+      - name: Debug Lilu headers
         run: |
-          mkdir -p include/ForceACL/LiluHeaders/Headers
-          cp -r Lilu/Lilu/Headers/. include/ForceACL/LiluHeaders/Headers/ || true
+          ls Lilu/Lilu/Headers/ | head -3
 
       - name: Checkout MacKernelSDK
         uses: actions/checkout@v4
