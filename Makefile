@@ -83,7 +83,9 @@ CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-I$(PWD)/include/ForceACL \
 	-I$(PWD)/Lilu/Lilu/Headers \
 	-I$(PWD)/Lilu/Lilu/PrivateHeaders \
-	-DLILU_SUPPORTS_1_7=1
+	-DLILU_SUPPORTS_1_7=1 \
+	-D__x86_64__=1 \
+	-D__arm64__=1
 
 # Additional flags from workflow
 OTHER_CFLAGS ?= -fapple-kext
