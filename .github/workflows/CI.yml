@@ -66,7 +66,7 @@ jobs:
           make BUILD_TYPE=debug ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
             LILU_HEADERS_PATH="$PWD/Lilu/Lilu" \
-            OTHER_CFLAGS="-mkernel -fno-builtin -fno-exceptions -fapple-kext" \
+            OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -fno-builtin -fno-exceptions -fapple-kext" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
               -Xlinker -kext \
@@ -85,7 +85,7 @@ jobs:
           make BUILD_TYPE=release ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
             LILU_HEADERS_PATH="$PWD/Lilu/Lilu" \
-            OTHER_CFLAGS="-mkernel -fno-builtin -fno-exceptions -fapple-kext" \
+            OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -fno-builtin -fno-exceptions -fapple-kext" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
               -Xlinker -kext \
@@ -148,4 +148,4 @@ jobs:
         run: |
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
-          make ANALYZE=1 SDKROOT=$SDKROOT LILU_HEADERS_PATH="$PWD/Lilu/Lilu" OTHER_CFLAGS="-mkernel -fapple-kext" OTHER_LDFLAGS="-isysroot $SDKROOT -Xlinker -kext -Xlinker -undefined -Xlinker dynamic_lookup" || true
+          make ANALYZE=1 SDKROOT=$SDKROOT LILU_HEADERS_PATH="$PWD/Lilu/Lilu" OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -fapple-kext" OTHER_LDFLAGS="-isysroot $SDKROOT -Xlinker -kext -Xlinker -undefined -Xlinker dynamic_lookup" || true
