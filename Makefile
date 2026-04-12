@@ -137,8 +137,12 @@ build_x86_64: | $(OBJDIR_X86)
 			-fno-common -fapple-kext \
 			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers \
 			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers/libkern \
-			-I$(LILU_HEADERS_PATH) -I$(LILU_HEADERS_PATH)/PrivateHeaders \
-			-I$(PWD)/include/ForceACL \
+			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/usr/include \
+			-Iinclude \
+			-I$(LILU_HEADERS_PATH) \
+			-I$(LILU_HEADERS_PATH)/Headers \
+			-I$(LILU_HEADERS_PATH)/PrivateHeaders \
+			-Iinclude/ForceACL \
 			-D__x86_64__ \
 			-mkernel -nostdlib -fno-builtin -fno-stack-protector \
 			-isysroot $(SDKROOT) \
@@ -156,8 +160,12 @@ build_arm64: | $(OBJDIR_ARM)
 			-fno-common -fapple-kext \
 			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers \
 			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers/libkern \
-			-I$(LILU_HEADERS_PATH) -I$(LILU_HEADERS_PATH)/PrivateHeaders \
-			-I$(PWD)/include/ForceACL \
+			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/usr/include \
+			-Iinclude \
+			-I$(LILU_HEADERS_PATH) \
+			-I$(LILU_HEADERS_PATH)/Headers \
+			-I$(LILU_HEADERS_PATH)/PrivateHeaders \
+			-Iinclude/ForceACL \
 			-D__arm64__ \
 			-mkernel -nostdlib -fno-builtin -fno-stack-protector \
 			-isysroot $(SDKROOT) \
