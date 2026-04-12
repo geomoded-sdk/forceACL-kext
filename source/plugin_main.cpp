@@ -7,9 +7,9 @@
 #include <IOKit/IOService.h>
 #include <IOKit/IOLib.h>
 
-#include <Headers/plugin_start.hpp>
-#include <Headers/kern_version.hpp>
-#include <Headers/kern_util.hpp>
+#include "plugin_start.hpp"
+#include "kern_version.hpp"
+#include "kern_util.hpp"
 
 #include "ForceACL/ForceACL.hpp"
 

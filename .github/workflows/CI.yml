@@ -29,13 +29,10 @@ jobs:
           ref: 1.7.2
           path: Lilu
 
-      - name: Debug Lilu path
+      - name: Copy Lilu headers
         run: |
-          echo "=== Lilu folder structure ==="
-          ls -la Lilu/
-          echo "=== Lilu Headers check ==="
-          ls Lilu/Headers 2>/dev/null || echo "No Lilu/Headers"
-          ls Lilu/Lilu/Headers 2>/dev/null || echo "No Lilu/Lilu/Headers"
+          mkdir -p include/ForceACL/LiluHeaders
+          cp -r Lilu/Lilu/Headers/* include/ForceACL/LiluHeaders/
 
       - name: Checkout MacKernelSDK
         uses: actions/checkout@v4
@@ -137,6 +134,11 @@ jobs:
           repository: acidanthera/Lilu
           ref: 1.7.2
           path: Lilu
+
+      - name: Copy Lilu headers
+        run: |
+          mkdir -p include/ForceACL/LiluHeaders
+          cp -r Lilu/Lilu/Headers/* include/ForceACL/LiluHeaders/
 
       - name: Checkout deps
         uses: actions/checkout@v4
