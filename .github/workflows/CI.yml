@@ -61,7 +61,8 @@ jobs:
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
 
-          make BUILD_TYPE=debug ARCHS="$ARCHS" SDKROOT=$SDKROOT \
+          make BUILD_TYPE=debug ARCHS="x86_64" SDKROOT=$SDKROOT \
+            OTHER_CFLAGS="-D__x86_64__" \
             OTHER_LDFLAGS="-Xlinker -kext -Xlinker -e -Xlinker _PLUGIN_ENTRY -Xlinker -undefined -Xlinker dynamic_lookup"
 
       # BUILD RELEASE

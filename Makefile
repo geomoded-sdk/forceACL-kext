@@ -136,6 +136,7 @@ build_x86_64: | $(OBJDIR_X86)
 			-target x86_64-apple-macos10.6 \
 			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
 			-DLILU_SUPPORTS_1_7=1 -DPRODUCT_NAME=ForceACL -DMODULE_VERSION=1.0.0 \
+			$(OTHER_CFLAGS) \
 			-fno-common -fapple-kext \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
@@ -158,6 +159,7 @@ build_arm64: | $(OBJDIR_ARM)
 			-target arm64-apple-macos11.0 \
 			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
 			-DLILU_SUPPORTS_1_7=1 -DPRODUCT_NAME=ForceACL -DMODULE_VERSION=1.0.0 \
+			$(OTHER_CFLAGS) \
 			-fno-common -fapple-kext \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers \
 			-I$(SDKROOT)/System/Library/Frameworks/Kernel.framework/Headers/libkern \
