@@ -14,6 +14,12 @@
 
 #include "ForceACL/ForceACL.hpp"
 
+#if defined(__x86_64__)
+#warning "__x86_64__ defined in plugin_main"
+#else
+#error "__x86_64__ missing in plugin_main"
+#endif
+
 #ifndef PRODUCT_NAME
 #define PRODUCT_NAME ForceACL
 #endif
