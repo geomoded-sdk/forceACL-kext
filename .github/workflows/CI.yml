@@ -32,7 +32,8 @@ jobs:
       - name: Copy Lilu headers
         run: |
           mkdir -p include/ForceACL/LiluHeaders
-          cp -r Lilu/Lilu/Headers/* include/ForceACL/LiluHeaders/
+          cp -r Lilu/Lilu/Headers/. include/ForceACL/LiluHeaders/ || true
+          ls include/ForceACL/LiluHeaders/
 
       - name: Checkout MacKernelSDK
         uses: actions/checkout@v4
@@ -62,7 +63,6 @@ jobs:
 
           make BUILD_TYPE=debug ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            LILU_HEADERS_PATH="$PWD/Lilu/Lilu" \
             OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -fno-builtin -fno-exceptions -fapple-kext" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
@@ -81,7 +81,6 @@ jobs:
 
           make BUILD_TYPE=release ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            LILU_HEADERS_PATH="$PWD/Lilu/Lilu" \
             OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -fno-builtin -fno-exceptions -fapple-kext" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
@@ -138,7 +137,7 @@ jobs:
       - name: Copy Lilu headers
         run: |
           mkdir -p include/ForceACL/LiluHeaders
-          cp -r Lilu/Lilu/Headers/* include/ForceACL/LiluHeaders/
+          cp -r Lilu/Lilu/Headers/. include/ForceACL/LiluHeaders/ || true
 
       - name: Checkout deps
         uses: actions/checkout@v4
@@ -150,4 +149,4 @@ jobs:
         run: |
           export SDKROOT=$(xcrun --sdk macosx --show-sdk-path)
           make clean
-          make ANALYZE=1 SDKROOT=$SDKROOT LILU_HEADERS_PATH="$PWD/Lilu/Lilu" OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -fapple-kext" OTHER_LDFLAGS="-isysroot $SDKROOT -Xlinker -kext -Xlinker -undefined -Xlinker dynamic_lookup" || true
+          make ANALYZE=1 SDKROOT=$SDKROOT OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -mkernel -fapple-kext" OTHER_LDFLAGS="-isysroot $SDKROOT -Xlinker -kext -Xlinker -undefined -Xlinker dynamic_lookup" || true
