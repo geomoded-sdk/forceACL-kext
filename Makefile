@@ -6,7 +6,14 @@ PRODUCT_NAME = ForceACL
 MODULE_VERSION = 1.0.0
 KEXT_NAME = ForceACL
 LILU_PATH ?= $(PWD)/Lilu
-LILU_HEADERS_PATH := $(shell if [ -d "$(LILU_PATH)/Lilu/Headers" ]; then echo "$(LILU_PATH)/Lilu"; else echo "$(LILU_PATH)"; fi)
+
+# CI uses Lilu/Headers, local uses Lilu/Lilu/Headers
+LILU_CHECK := $(wildcard $(LILU_PATH)/Headers/plugin_start.hpp)
+ifeq ($(LILU_CHECK),)
+LILU_HEADERS_PATH := $(LILU_PATH)/Lilu
+else
+LILU_HEADERS_PATH := $(LILU_PATH)
+endif
 
 # Build type
 BUILD_TYPE ?= debug
