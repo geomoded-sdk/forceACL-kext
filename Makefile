@@ -128,12 +128,19 @@ $(OBJDIR_ARM):
 build_x86_64: | $(OBJDIR_X86)
 	@echo "Building x86_64..."
 	@test -f "$(LILU_HEADERS_PATH)/Headers/plugin_start.hpp" || echo "ERROR: plugin_start.hpp not found!"
-	@echo "DEBUG: CXX=$(CXX) CXXFLAGS=$(CXXFLAGS) CPPFLAGS=$(CPPFLAGS)"
 	@for src in $(SOURCES); do \
 		obj="$(OBJDIR_X86)/$$(basename $$src .cpp).o"; \
-		$(CXX) $(CXXFLAGS) \
+		clang++ -Wall -Wextra -Wno-unused-parameter -std=c++17 -g -O0 \
 			-target x86_64-apple-macos10.6 \
-			$(CPPFLAGS) -D__x86_64__ $(KEXT_FLAGS) $(OTHER_CFLAGS) \
+			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
+			-DLILU_SUPPORTS_1_7=1 -DPRODUCT_NAME=ForceACL -DMODULE_VERSION=1.0.0 \
+			-fno-common -fapple-kext \
+			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers \
+			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers/libkern \
+			-I$(LILU_HEADERS_PATH) -I$(LILU_HEADERS_PATH)/PrivateHeaders \
+			-I$(PWD)/include/ForceACL \
+			-D__x86_64__ \
+			-mkernel -nostdlib -fno-builtin -fno-stack-protector \
 			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
 	done
@@ -142,9 +149,17 @@ build_arm64: | $(OBJDIR_ARM)
 	@echo "Building arm64..."
 	@for src in $(SOURCES); do \
 		obj="$(OBJDIR_ARM)/$$(basename $$src .cpp).o"; \
-		$(CXX) $(CXXFLAGS) \
+		clang++ -Wall -Wextra -Wno-unused-parameter -std=c++17 -g -O0 \
 			-target arm64-apple-macos11.0 \
-			$(CPPFLAGS) -D__arm64__ $(KEXT_FLAGS) $(OTHER_CFLAGS) \
+			-DKERNEL -DKERNEL_DEBUG -DKERNEL_PRIVATE -DDRIVER_PRIVATE -DAPPLE -DNeXT -D__ACIDANTHERA_MAC_SDK \
+			-DLILU_SUPPORTS_1_7=1 -DPRODUCT_NAME=ForceACL -DMODULE_VERSION=1.0.0 \
+			-fno-common -fapple-kext \
+			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers \
+			-I/Applications/Xcode_16.4.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.5.sdk/System/Library/Frameworks/Kernel.framework/Headers/libkern \
+			-I$(LILU_HEADERS_PATH) -I$(LILU_HEADERS_PATH)/PrivateHeaders \
+			-I$(PWD)/include/ForceACL \
+			-D__arm64__ \
+			-mkernel -nostdlib -fno-builtin -fno-stack-protector \
 			-isysroot $(SDKROOT) \
 			-c $$src -o $$obj || exit 1; \
 	done
