@@ -79,7 +79,11 @@ CPPFLAGS = -DKERNEL -DKERNEL_DEBUG \
 	-I$(SDKROOT)/usr/include \
 	-I$(PWD)/include \
 	-I$(LILU_HEADERS_PATH) \
-	-I$(LILU_HEADERS_PATH)/PrivateHeaders
+	-I$(LILU_HEADERS_PATH)/PrivateHeaders \
+	-I$(PWD)/include/ForceACL \
+	-I$(PWD)/Lilu/Lilu/Headers \
+	-I$(PWD)/Lilu/Lilu/PrivateHeaders \
+	-DLILU_SUPPORTS_1_7=1
 
 # Additional flags from workflow
 OTHER_CFLAGS ?= -fapple-kext
