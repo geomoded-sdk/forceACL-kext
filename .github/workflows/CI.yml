@@ -65,7 +65,7 @@ jobs:
 
           make BUILD_TYPE=debug ARCHS="$ARCHS" \
             SDKROOT=$SDKROOT \
-            OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -Itmp/Lilu/Lilu/Headers -Itmp/Lilu/Lilu/PrivateHeaders -I$PWD/Lilu/Lilu/Headers -I$PWD/Lilu/Lilu/PrivateHeaders -I$PWD/include/ForceACL -I$PWD/include/ForceACL/LiluHeaders -I$PWD/include/ForceACL/LiluHeaders/Headers -I$PWD/include/ForceACL/LiluHeaders/PrivateHeaders -mkernel -fno-builtin -fno-exceptions -fapple-kext -DKERNEL -DKERNEL_PRIVATE -DDEBUG -D__ACIDANTHERA_MAC_SDK -DLILU_VERSION=172" \
+            OTHER_CFLAGS="-isysroot $SDKROOT -I$PWD/MacKernelSDK -Itmp/Lilu/Lilu/Headers -Itmp/Lilu/Lilu/PrivateHeaders -I$PWD/Lilu/Lilu/Headers -I$PWD/Lilu/Lilu/PrivateHeaders -I$PWD/include/ForceACL -I$PWD/include/ForceACL/LiluHeaders -I$PWD/include/ForceACL/LiluHeaders/Headers -I$PWD/include/ForceACL/LiluHeaders/PrivateHeaders -mkernel -fno-builtin -fno-exceptions -fapple-kext -DKERNEL -DKERNEL_PRIVATE -DDEBUG -D__ACIDANTHERA_MAC_SDK" \
             OTHER_LDFLAGS="\
               -isysroot $SDKROOT \
               -Xlinker -kext \
