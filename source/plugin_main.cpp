@@ -11,15 +11,21 @@
 #include "kern_version.hpp"
 #include "kern_util.hpp"
 
-#define LILU_CUSTOM_KMOD_INIT
-#define LILU_CUSTOM_IOKIT_INIT
+#include "plugin_start.hpp"
+#include "kern_version.hpp"
+#include "kern_util.hpp"
 
 #include "ForceACL/ForceACL.hpp"
 
 extern "C" {
 int PE_parse_boot_arg_num(const char* arg, void* value);
+}
 
-void ADDPR(pluginStart)() {
+static const char* forceacl_disableArg[] = { "-ffacloff", "-noffacl" };
+static const char* forceacl_debugArg[] = { "ffacl_debug", "ffacl=0" };
+static const char* forceacl_betaArg[] = { "-ffaclbeta" };
+
+void ForceACL_pluginStart() {
     auto* plugin = ForceACLPlugin::getInstance();
     if (plugin) {
         IOLog("ForceACL v" xStringify(MODULE_VERSION) " - Initializing...\n");
@@ -28,22 +34,21 @@ void ADDPR(pluginStart)() {
     }
 }
 
-PluginConfiguration ADDPR(config) = {
+extern "C" {
+PluginConfiguration ForceACL_config = {
     xStringify(PRODUCT_NAME),
     parseModuleVersion(xStringify(MODULE_VERSION)),
     LiluAPI::AllowNormal,
-    disableArg,
+    forceacl_disableArg,
     2,
-    debugArg,
+    forceacl_debugArg,
     2,
-    betaArg,
+    forceacl_betaArg,
     1,
     KernelVersion::HighSierra,
     KernelVersion::Sonoma,
-    ADDPR(pluginStart)
+    ForceACL_pluginStart
 };
-
-bool ADDPR(startSuccess);
 }
 
 static const char* disableArg[] = { "-ffacloff", "-noffacl" };
