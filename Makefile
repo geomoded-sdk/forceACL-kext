@@ -48,8 +48,8 @@ DEPLOYMENT_TARGET_ARM64 = 11.0
 
 # Archs
 ARCHS ?= arm64 x86_64
-HAS_X86 := $(findstring x86_64,$(ARCHS))
-HAS_ARM64 := $(findstring arm64,$(ARCHS))
+HAS_X86 = $(findstring x86_64,$(ARCHS))
+HAS_ARM64 = $(findstring arm64,$(ARCHS))
 
 # Output
 BUILDDIR = build/$(BUILD_NAME)
