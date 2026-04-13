@@ -10,12 +10,12 @@ on:
 env:
   PROJECT_TYPE: KEXT
   MACOSX_DEPLOYMENT_TARGET: 10.15
-  ARCHS: arm64 x86_64
+  ARCHS: x86_64
 
 jobs:
   build:
     name: Build Kext (Stable)
-    runs-on: macos-latest
+    runs-on: macos-13
 
     steps:
       - uses: actions/checkout@v4
